@@ -160,11 +160,15 @@ def writeGerberFooter(fid):
   fid.write('M02*\n')
 
 def writeExcellonHeader(fid):
-  if config.Config['measurementunits'] != 'inch': # metric - mm
-    fid.write( \
-"""M48
-METRIC,0000.00
-""")
+  fid.write("M48\n")
+  if config.Config['excellonleadingzeros']:
+    zerosDef = "LZ"
+  else:
+    zerosDef = "TZ"
+  if config.Config['measurementunits'] == 'inch':
+    fid.write("INCH,%s\n" % zerosDef)
+  else: # metric - mm
+    fid.write("METRIC,%s\n" % zerosDef)
   fid.write('%\n')
 
 def writeExcellonFooter(fid):

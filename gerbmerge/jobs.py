@@ -93,7 +93,9 @@ XIgnoreList = ( \
   re.compile(r'^%$'),
   re.compile(r'^M30$'),   # End of job
   re.compile(r'^M48$'),   # Program header to first %
-  re.compile(r'^M72$')    # Inches
+  re.compile(r'^M72$'),   # Inches
+  re.compile(r'^G05$'),   # Drill Mode
+  re.compile(r'^G90$')    # Absolute Mode
   )
 
 # A Job is a single input board. It is expected to have:
@@ -656,7 +658,7 @@ class Job:
         #print "ignoring METRIC directive: " + line
           continue # ignore it so func doesn't choke on it
 
-      if line[:3] == 'T00': # a tidying up that we can ignore
+      if line[:3] == 'T00' or line[:2] == 'T0': # a tidying up that we can ignore
         continue
 # end metric/diptrace support
 
@@ -812,42 +814,52 @@ class Job:
     return L
 
   def writeExcellon(self, fid, diameter, Xoff, Yoff):
-    "Write out the data such that the lower-left corner of this job is at the given (X,Y) position, in inches"
-    
+    """Write out the data such that the lower-left corner of this job is at the given (X,Y) position, in inches
+
+    args:
+      fid - output file
+      diameter
+      Xoff - offset of this board instance in full units (float)
+      Yoff - offset of this board instance in full units (float)
+    """
+
     # First convert given inches to 2.4 co-ordinates. Note that Gerber is 2.5 (as of GerbMerge 1.2)
     # and our internal Excellon representation is 2.4 as of GerbMerge
     # version 0.91. We use X,Y to calculate DX,DY in 2.4 units (i.e., with a
     # resolution of 0.0001".
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
-    if config.Config['measurementunits'] == 'inch':
-      X = int(round(Xoff/0.00001))  # First work in 2.5 format to match Gerber
-      Y = int(round(Yoff/0.00001))
-    else:
-      X = int(round(Xoff/0.001))  # First work in 5.3 format to match Gerber
-      Y = int(round(Yoff/0.001))
+    X = int(round(Xoff/0.00001))  # First work in 2.5 format to match Gerber
+    Y = int(round(Yoff/0.00001))
 
     # Now calculate displacement for each position so that we end up at specified origin
     DX = X - self.minx
     DY = Y - self.miny
 
     # Now round down to 2.4 format
-    # this scaling seems to work for either unit system
     DX = int(round(DX/10.0))
     DY = int(round(DY/10.0))
 
     ltools = self.findTools(diameter)
 
-    if config.Config['excellonleadingzeros']:
-      fmtstr = 'X%06dY%06d\n'
-    else:
-      fmtstr = 'X%dY%d\n'
+    def formatForXln(num):
+      """
+      helper to convert from our 2.4 internal format to config's excellon format
+      returns string
+      """
+      divisor = 10.0**(4 - config.Config['excellondecimals'])
+      if config.Config['excellonleadingzeros']:
+        fmtstr = '%06d'
+      else:
+        fmtstr = '%d'
+      return fmtstr % (num / divisor)
 
     # Boogie
     for ltool in ltools:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
           x, y = cmd
-          fid.write(fmtstr % (x+DX, y+DY))
+          new_x = x+DX
+          new_y = y+DY
+          fid.write('X%sY%s\n' % (formatForXln(new_x), formatForXln(new_y)))
 
   def writeDrillHits(self, fid, diameter, toolNum, Xoff, Yoff):
     """Write a drill hit pattern. diameter is tool diameter in inches, while toolNum is
