@@ -6,7 +6,7 @@ import os
 from distutils.core import setup, Extension
 import distutils.sysconfig
 
-from gerbmerge.gerbmerge import VERSION_MAJOR, VERSION_MINOR
+from gerbmerge.__version_info__ import __version__
 
 if sys.version_info < (2,4,0):
   print '*'*73
@@ -37,7 +37,10 @@ if sys.platform == 'win32' or ('bdist_wininst' in sys.argv):
   BinFiles = ['misc/gerbmerge.bat']
   BinDir = '.'
 else:
-  DestLib = distutils.sysconfig.get_config_var('LIBPYTHON')
+  # try to find the library location on this platform
+  DestLib = None
+  if DestLib == None: DestLib = distutils.sysconfig.get_config_var('LIBPYTHON')
+  if DestLib == None: DestLib = distutils.sysconfig.get_config_var('LIBDEST')
   DestDir = os.path.join(DestLib, 'gerbmerge')
   BinFiles = ['misc/gerbmerge']
   BinDir = distutils.sysconfig.get_config_var('BINDIR')  
@@ -52,7 +55,7 @@ python %s/site-packages/gerbmerge/gerbmerge.py $*
 
 dist=setup (name = "gerbmerge",
        license = "GPL",
-       version = "%d.%d" % (VERSION_MAJOR, VERSION_MINOR),
+       version = __version__,
       long_description=\
 r"""GerbMerge is a program that combines several Gerber
 (i.e., RS274-X) and Excellon files into a single set
@@ -69,15 +72,16 @@ For more details on installation or running GerbMerge, see the
 URL below.
 """,
        description = "Merge multiple Gerber/Excellon files",
-       author = "Rugged Circuits LLC",
-       author_email = "support@ruggedcircuits.com",
-       url = "http://ruggedcircuits.com/gerbmerge",
+       author = "ProvideYourOwn.com",
+       author_email = "",
+       url = "https://github.com/provideyourown/gerbmerge",
        packages = ['gerbmerge'],
        platforms = ['all'],
        data_files = [ (DestDir, AuxFiles), 
                       (os.path.join(DestDir,'testdata'), SampleFiles),
                       (os.path.join(DestDir,'doc'), DocFiles),
-                      (BinDir, BinFiles) ]
+                      (BinDir, BinFiles) ],
+       install_requires = ['simpleparse']
 )
 
 do_fix_perms = 0

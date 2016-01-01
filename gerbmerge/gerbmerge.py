@@ -43,8 +43,8 @@ import util
 import scoring
 import drillcluster
 
-VERSION_MAJOR=1
-VERSION_MINOR='9b'
+# make version info available when running as script
+from __version_info__ import __version__
 
 RANDOM_SEARCH = 1
 EXHAUSTIVE_SEARCH = 2
@@ -804,7 +804,7 @@ def updateGUI(text = None):
   if GUI != None:
     GUI.updateProgress(text)
 
-if __name__=="__main__":
+def main():
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'hvs', ['help', 'version', 'octagons=', 'random-search', 'full-search', 'rs-fsjobs=', 'search-timeout=', 'place-file=', 'no-trim-gerber', 'no-trim-excellon', 'skipdisclaimer'])
   except getopt.GetoptError:
@@ -815,13 +815,13 @@ if __name__=="__main__":
       usage()
     elif opt in ('-v', '--version'):
       print """
-GerbMerge Version %d.%s  --  Combine multiple Gerber/Excellon files
+GerbMerge Version %s  --  Combine multiple Gerber/Excellon files
 
 This program is licensed under the GNU General Public License (GPL)
 Version 3. See LICENSE file or http://www.fsf.org for details of this license.
 
 ProvideYourOwn - http://provideyourown.com
-""" % (VERSION_MAJOR, VERSION_MINOR)
+""" % (__version__)
       sys.exit(0)
     elif opt in ('--octagons', '--random-search','--full-search','--rs-fsjobs','--place-file','--no-trim-gerber','--no-trim-excellon', '--search-timeout', '-s', '--skipdisclaimer'):
       pass ## arguments are valid
@@ -832,4 +832,8 @@ ProvideYourOwn - http://provideyourown.com
     usage()
     
   sys.exit(merge(opts, args)) ## run germberge
+
+if __name__=="__main__":
+  main()
+
 # vim: expandtab ts=2 sw=2 ai syntax=python
