@@ -53,6 +53,23 @@
   <P>All of the above packages come with easy installation programs for both Windows, Mac OS X,
   and Linux.
 
+
+## Automatic Installation with PIP
+
+This repository can generate a tarball for installation with PIP. In the repository, run:
+```
+$ python setup.py sdist
+$ pip install dist/gerbmerge-1.9.3.tar.gz
+```
+
+PIP will automatically resolve the dependencies. `-1.9.3` will change with the current tool version.
+
+To easily run the installed package without looking up your python path, use python's "run module as script" feature:
+```
+$ python -m gerbmerge <args>
+```
+
+
 <P><A NAME="Installation"></A></P>
 <H2>Installation</H2>
 
