@@ -658,7 +658,7 @@ class Job:
         #print "ignoring METRIC directive: " + line
           continue # ignore it so func doesn't choke on it
 
-      if line[:3] == 'T00' or line[:2] == 'T0': # a tidying up that we can ignore
+      if line[:3] == 'T00': # a tidying up that we can ignore
         continue
 # end metric/diptrace support
 
