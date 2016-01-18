@@ -26,7 +26,7 @@ if 0:
 
 SampleFiles = glob.glob('testdata/*')
 DocFiles = glob.glob('doc/*')
-AuxFiles = ['COPYING']
+AuxFiles = ['LICENSE']
 
 if sys.platform == 'win32' or ('bdist_wininst' in sys.argv):
   #DestLib = distutils.sysconfig.get_config_var('prefix')
