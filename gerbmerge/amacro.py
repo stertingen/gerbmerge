@@ -110,9 +110,10 @@ class ApertureMacroPrimitive:
     # type 4 which is an outline and has a variable number of points.
     # For outlines, the second parameter indicates the number of points,
     # each of which has an (X,Y) co-ordinate. Thus, we expect an Outline
-    # specification to have 1+1+2*N+1=3+2N fields:
+    # specification to have 1+1+2+2*N+1=5+2N fields:
     #   - first field is exposure
     #   - second field is number of points
+	#   - thrid and forth fields is for the initial point
     #   - 2*N fields for X,Y points
     #   - last field is rotation
     if self.code==4:
@@ -124,7 +125,7 @@ class ApertureMacroPrimitive:
       except:
         raise RuntimeError, 'Outline macro primitive has non-integer number of points'
 
-      if len(fields) != (3+2*N):
+      if len(fields) != (5+2*N):
         raise RuntimeError, 'Outline macro primitive has %d fields...expecting %d fields' % (len(fields), 3+2*N)
     else:
       if len(fields) != len(valids):

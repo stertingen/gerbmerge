@@ -24,7 +24,6 @@ import aptable
 Config = {
    'measurementunits': 'inch',       # Unit system to use: inch or mm
    'searchtimeout': 0,               # moved here from hardcoded below
-   'skipdisclaimer': 0,              # set to 1 to skip disclaimer prompt
    'xspacing': 0,                    # Spacing in horizontal direction - default is set in parseConfigFile based on units
    'yspacing': 0,                    # Spacing in vertical direction - ditto
    'panelwidth': '12.6',             # X-Dimension maximum panel size (Olimex)
@@ -213,7 +212,7 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
   global DefaultToolList
 
   CP = ConfigParser.ConfigParser()
-  CP.readfp(file(fname,'rt'))
+  CP.readfp(file(fname.rstrip(),'rt'))
 
   # First parse global options
   if CP.has_section('Options'):
