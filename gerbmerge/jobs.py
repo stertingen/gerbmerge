@@ -87,7 +87,7 @@ xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter 
                                                                 # feed/speed (for Protel)
 xtdef2_pat = re.compile(r'^(T\d+)C([0-9.]+)(?:F\d+)?(?:S\d+)?$') # Tool+diameter definition with optional
                                                                 # feed/speed at the end (for OrCAD)
-xzsup_pat = re.compile(r'^INCH,([LT])Z$')      # Leading/trailing zeros INCLUDED
+xzsup_pat = re.compile(r'^INCH(,([LT])Z)?$')      # Leading/trailing zeros INCLUDED
 
 XIgnoreList = ( \
   re.compile(r'^%$'),
