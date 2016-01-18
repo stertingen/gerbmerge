@@ -160,11 +160,15 @@ def writeGerberFooter(fid):
   fid.write('M02*\n')
 
 def writeExcellonHeader(fid):
-  if config.Config['measurementunits'] != 'inch': # metric - mm
-    fid.write( \
-"""M48
-METRIC,0000.00
-""")
+  fid.write("M48\n")
+  if config.Config['excellonleadingzeros']:
+    zerosDef = "LZ"
+  else:
+    zerosDef = "TZ"
+  if config.Config['measurementunits'] == 'inch':
+    fid.write("INCH,%s\n" % zerosDef)
+  else: # metric - mm
+    fid.write("METRIC,%s\n" % zerosDef)
   fid.write('%\n')
 
 def writeExcellonFooter(fid):
@@ -243,9 +247,6 @@ def writeCropMarks(fid, drawing_code, OriginX, OriginY, MaxXExtent, MaxYExtent):
   fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+cropW), util.in2gerb(y+0.000)))
 
 def disclaimer():
-  if (config.Config['skipdisclaimer'] > 0): # remove annoying disclaimer
-    return 
-
   print """
 ****************************************************
 *           R E A D    C A R E F U L L Y           *
