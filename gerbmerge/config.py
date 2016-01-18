@@ -213,7 +213,7 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
   global DefaultToolList
 
   CP = ConfigParser.ConfigParser()
-  CP.readfp(file(fname,'rt'))
+  CP.readfp(file(fname.rstrip(),'rt'))
 
   # First parse global options
   if CP.has_section('Options'):
