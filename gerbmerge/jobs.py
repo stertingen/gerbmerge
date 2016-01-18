@@ -68,6 +68,11 @@ IgnoreList = ( \
   re.compile(r'^\*?%$'),
   re.compile(r'^M0?2\*$'),
 
+  # new Gerber Attributes
+  re.compile(r'^%TF.*\*%'),
+  re.compile(r'^%TA.*\*%'),
+  re.compile(r'^%TD.*\*%'),
+  
   # These additional ones are for Orcad Layout, PCB, Protel, etc.
   re.compile(r'\*'),            # Empty statement
   re.compile(r'^%IN.*\*%'),
