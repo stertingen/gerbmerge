@@ -39,8 +39,8 @@
   <LI>Artwork in Gerber RS274-X format</LI>
   <LI>Drill files in Excellon format</LI>
   </UL>
-  Here is <A HREF="sample.jpg">one sample</A> and <A HREF="sample2.jpg">another sample</A> of the program's output. These samples
-  demonstrate panelizing multiple, different jobs, and also demonstrate board rotation.
+  Here is a <A HREF="sample.png">sample</A> of the program's output. This sample
+  demonstrates panelizing multiple, different jobs.
 
 
 <P><A NAME="Requirements"></A></P>
