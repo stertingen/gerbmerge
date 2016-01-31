@@ -112,14 +112,14 @@ pip uninstall gerbmerge
 <p>Launch shell and install <i>simpleparse</i>:
 <ul>
 <pre>
-pip install simpleparse
+sudo pip install simpleparse
 </pre>
 </ul>
 <p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
 <ul>
 <pre>
 python setyp.py sdist
-pip install dist/gerbmerge-1.9.4
+sudo pip istall dist/gerbmerge-1.9.4
 </pre>
 </ul>
 <p>Now you can use it by running <i>gerbmerge</i>.
@@ -127,7 +127,7 @@ pip install dist/gerbmerge-1.9.4
 <p>To uninstall gerbmerge, open shell and run:
 <ul>
 <pre>
-pip uninstall gerbmerge
+sudo pip uninstall gerbmerge
 </pre>
 </ul>
 
