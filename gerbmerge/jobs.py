@@ -835,8 +835,12 @@ class Job:
     # and our internal Excellon representation is 2.4 as of GerbMerge
     # version 0.91. We use X,Y to calculate DX,DY in 2.4 units (i.e., with a
     # resolution of 0.0001".
-    X = int(round(Xoff/0.00001))  # First work in 2.5 format to match Gerber
-    Y = int(round(Yoff/0.00001))
+    if config.Config['measurementunits'] == 'inch':
+      X = int(round(Xoff/0.00001))  # First work in 2.5 format to match Gerber
+      Y = int(round(Yoff/0.00001))
+    else:
+      X = int(round(Xoff/0.001))  # First work in 5.3 format to match Gerber
+      Y = int(round(Yoff/0.001))
 
     # Now calculate displacement for each position so that we end up at specified origin
     DX = X - self.minx
