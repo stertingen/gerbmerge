@@ -1111,12 +1111,7 @@ class Job:
     keys = self.xcommands.keys()
     for toolname in keys:
       # Remember Excellon is 2.4 format while Gerber data is 2.5 format
-# add metric support (1/1000 mm vs. 1/100,000 inch)
-# the normal metric scale factor isn't working right, so we'll leave it alone!!!!?
-      if config.Config['measurementunits'] == 'inch':
-        validList = [(x,y) for x,y in self.xcommands[toolname] if self.inBorders(10*x,10*y)]
-      else:
-        validList = [(x,y) for x,y in self.xcommands[toolname] if self.inBorders(0.1*x,0.1*y)]
+      validList = [(x,y) for x,y in self.xcommands[toolname] if self.inBorders(10*x,10*y)]
 
       if validList:
         self.xcommands[toolname] = validList
