@@ -173,10 +173,9 @@ gerbmerge
 </pre>
 </ul>
 
-<H3>Windows</H3>
-<P>Open a DOS box and invoke the Python interpreter on the <TT>gerbmerge.py</TT> file.
-Have a look at GERBMERGE.BAT (and put this on your Path somewhere) for an example.
-<PRE><CENTER>c:\python24\python c:\python24\lib\site-packages\gerbmerge\gerbmerge.py</CENTER></PRE>
+<H3>Windows (native)</H3>
+<P>Open a DOS command prompt and laucnh gerberge.bat file:
+<PRE><CENTER>c:\python27\gerbmerge.bat</CENTER></PRE>
 
 <H3>Unix / Mac OS X</H3>
 <p>Open shell and type
@@ -359,6 +358,10 @@ fabrication drawing.</LI>
    <DD>The '<TT>-v</TT>' or '<TT>--version</TT>' option prints the current program version and author contact information.</DD>
   </DL>
 
+<P><A NAME="Examples"></A></P>
+<H2>Examples</H2>
+<p>Example layout config files and gerber files (both original and merged) can be found in gerbmerge/examples folder
+  
 <P><A NAME="Copyright"></A></P>
 <H2>Copyright &amp; License</H2>
 
