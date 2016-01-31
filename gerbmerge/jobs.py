@@ -10,6 +10,9 @@ Version 3.  See http://www.fsf.org for details of the license.
 
 Rugged Circuits LLC
 http://ruggedcircuits.com/gerbmerge
+
+Unwired Devices LLC
+http://github.com/unwireddevices/gerbmerge
 """
 
 import sys

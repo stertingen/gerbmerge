@@ -3,6 +3,13 @@
 <P><HR ALIGN=LEFT></P>
 
 <H2>What's New</H2>
+<p>In release 1.9.4</p>
+<ul>
+<li>Metric support fixed and tested with Diptrace</li>
+<li>Support for Cygwin environment</li>
+<li>Some Gerber parsing fixes</li>
+</ul>
+
 <p>In release 1.9</p>
 <ul>
 <li>Added metric support</li>
@@ -304,6 +311,11 @@ fabrication drawing.</LI>
 <P><A NAME="Copyright"></A></P>
 <H2>Copyright &amp; License</H2>
 
+  <p>Copyright &copy; 2016 <a href="http://www.unwireddevices.com">Unwired Devices LLC</a>.
+
+  <p>This repo is a fork of gerbmerge, version 1.9 from ProvideYourOwn.com, with additional patches by
+  Ian Hartwig and Paulo Henrique Silva</p>
+  
   <p>Copyright &copy; 2013 <a href="http://provideyourown.com">ProvideYourOwn.com</a>. All Rights Reserved.
 
   <p>This repo is a fork of gerbmerge, version 1.8 from Rugged Circuits LLC: </p>
@@ -318,6 +330,11 @@ fabrication drawing.</LI>
 
 <P><A NAME="Todo"></A></P>
 <H2>To Do</H2>
+
+  <ol>
+    <li>Proper metric/inch support: parse files with arbitrary units, output files with units
+	specified in the config</li>
+  </ol>
 
   <OL>
     <LI>Accept outputs from more CAD programs</LI>
