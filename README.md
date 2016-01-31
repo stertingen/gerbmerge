@@ -95,7 +95,7 @@ pip install simpleparse
 <ul>
 <pre>
 python setyp.py sdist
-pip install dist/gerbmerge-1.9.4
+pip install dist/gerbmerge-1.9.4.tar.gz
 </pre>
 </ul>
 <p>Now you can use it by running <i>gerbmerge</i> in Cygwin shell.
@@ -104,6 +104,35 @@ pip install dist/gerbmerge-1.9.4
 <ul>
 <pre>
 pip uninstall gerbmerge
+</pre>
+</ul>
+
+<H3>Windows (native)</H3>
+
+<p><a href="https://www.python.org/downloads/release/python-2711/">Download</a> and install Python-2.7,
+<i>pip</i> will be installed too. Assuming Python installation folder is C:\Python27, open command propmt
+and run:
+<ul>
+<pre>
+cd c:\python27\
+scripts\pip.exe install simpleparse
+</pre>
+</ul>
+
+<p><p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
+<ul>
+<pre>
+c:\python27\python.exe setyp.py sdist
+c:\python27\scripts\pip.exe istall dist\gerbmerge-1.9.4.zip
+</pre>
+</ul>
+
+<p>Now you can use it by running <i>c:\python27\gerbmerge.bat</i> in command prompt.
+
+<p>To uninstall gerbmerge, launch command prompt and run:
+<ul>
+<pre>
+c:\python27\scripts\pip.exe uninstall gerbmerge
 </pre>
 </ul>
 
@@ -119,7 +148,7 @@ sudo pip install simpleparse
 <ul>
 <pre>
 python setyp.py sdist
-sudo pip istall dist/gerbmerge-1.9.4
+sudo pip istall dist/gerbmerge-1.9.4.tar.gz
 </pre>
 </ul>
 <p>Now you can use it by running <i>gerbmerge</i>.
@@ -355,9 +384,6 @@ fabrication drawing.</LI>
   <ol>
     <li>Proper metric/inch support: parse files with arbitrary units, output files with units
 	specified in the config</li>
-  </ol>
-
-  <OL>
     <LI>Accept outputs from more CAD programs</LI>
     <LI>A graphical interface for interactive placement</LI>
     <LI>Better reporting of parse errors in the layout and configuration files</LI>
