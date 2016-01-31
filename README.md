@@ -252,7 +252,7 @@ more familiar with both could point out some differences.</DD>
 <H2>Limitations</H2>
 
 <UL>
-<LI>This program has mainly been tested with output from the Eagle CAD program.
+<LI>This program has mainly been tested with output from Eagle CAD and Diptrace programs.
 Limited testing has been performed with Orcad, Protel, and PCB.
 Other CAD programs will NOT WORK with a very high probability, as the input
 parser is quite primitive.
