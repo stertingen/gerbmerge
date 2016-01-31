@@ -1,0 +1,4 @@
+include setup.cfg
+include setup.py
+include LICENSE
+recursive-include gerbmerge *.py

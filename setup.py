@@ -39,17 +39,18 @@ if sys.platform == 'win32' or ('bdist_wininst' in sys.argv):
 else:
   # try to find the library location on this platform
   DestLib = None
-  if DestLib == None: DestLib = distutils.sysconfig.get_config_var('LIBPYTHON')
-  if DestLib == None: DestLib = distutils.sysconfig.get_config_var('LIBDEST')
+  if DestLib == None: DestLib = distutils.sysconfig.get_python_lib()
   DestDir = os.path.join(DestLib, 'gerbmerge')
   BinFiles = ['misc/gerbmerge']
   BinDir = distutils.sysconfig.get_config_var('BINDIR')  
 
   # Create top-level invocation program
+  if not os.path.exists('misc'):
+    os.makedirs('misc')
   fid = file('misc/gerbmerge', 'wt')
   fid.write( \
   r"""#!/bin/sh
-python %s/site-packages/gerbmerge/gerbmerge.py $*
+python %s/gerbmerge/gerbmerge.py $*
   """ % DestLib)
   fid.close()
 
@@ -72,9 +73,9 @@ For more details on installation or running GerbMerge, see the
 URL below.
 """,
        description = "Merge multiple Gerber/Excellon files",
-       author = "ProvideYourOwn.com",
-       author_email = "",
-       url = "https://github.com/provideyourown/gerbmerge",
+       author = "Unwired Devices LLC",
+       author_email = "info@unwds.com",
+       url = "https://github.com/unwireddevices/gerbmerge",
        packages = ['gerbmerge'],
        platforms = ['all'],
        data_files = [ (DestDir, AuxFiles), 
