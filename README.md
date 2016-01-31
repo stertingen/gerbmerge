@@ -7,6 +7,7 @@
 <ul>
 <li>Metric support fixed and tested with Diptrace</li>
 <li>Support for Cygwin environment</li>
+<li>Fixed Windows installation</li>
 <li>Some Gerber parsing fixes</li>
 </ul>
 
