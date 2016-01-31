@@ -420,5 +420,6 @@ fabrication drawing.</LI>
 <HR ALIGN=LEFT>
 
 <center><font size="-1">
-<p>Copyright &copy; 2013 <a href="http://provideyourown.com">ProvideYourOwn.com</a>. All Rights Reserved.</p>
+<p>Copyright &copy; 2016 <a href="http://www.unwireddevices.com">Unwired Devices LLC</a>. All Rights Reserved.</p>
+<p>Portions (version 1.9.3 & prior): Copyright &copy; 2013 <a href="http://provideyourown.com">ProvideYourOwn.com</a>. All Rights Reserved.</p>
 <p><center><font size="-1">Portions (version 1.8 & prior): Copyright &copy; 2003-2011, Copyright by <A HREF="http://ruggedcircuits.com">Rugged Circuits LLC</A>; All Rights Reserved. mailto: <A HREF="mailto:support@ruggedcircuits.com?subject=GerbMerge">support@ruggedcircuits.com</A></p></font></center>
