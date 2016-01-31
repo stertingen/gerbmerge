@@ -32,14 +32,24 @@ if sys.platform == 'win32' or ('bdist_wininst' in sys.argv):
   #DestLib = distutils.sysconfig.get_config_var('prefix')
   #DestDir = os.path.join(DestLib, 'gerbmerge')
   #BinDir = DestLib
-  DestLib = '.'
+  DestLib = distutils.sysconfig.get_python_lib()
   DestDir = os.path.join(DestLib, 'gerbmerge')
   BinFiles = ['misc/gerbmerge.bat']
   BinDir = '.'
+  
+  # Create top-level invocation program
+  if not os.path.exists('misc'):
+    os.makedirs('misc')
+  fid = file('misc/gerbmerge.bat', 'wt')
+  fid.write( \
+  r"""@echo off
+%s %s\gerbmerge\gerbmerge.py %%1 %%2 %%3 %%4 %%5 %%6 %%7 %%8 %%9
+  """ % (sys.executable, DestLib) )
+  fid.close()
+
 else:
   # try to find the library location on this platform
-  DestLib = None
-  if DestLib == None: DestLib = distutils.sysconfig.get_python_lib()
+  DestLib = distutils.sysconfig.get_python_lib()
   DestDir = os.path.join(DestLib, 'gerbmerge')
   BinFiles = ['misc/gerbmerge']
   BinDir = distutils.sysconfig.get_config_var('BINDIR')  
@@ -118,13 +128,14 @@ if do_fix_perms:
     print "*** systems without permission flags, you don't need to"
     print '*** worry about it.' 
 
-if cmd[:7]=='install':
-  print
-  print '******** Installation Complete ******** '
-  print
-  print 'Sample files and documentation have been installed in:'
-  print '   ', DestDir
-  print
-  print 'A shortcut to starting the program has been installed as:'
-  print '   ', os.path.join(BinDir, 'gerbmerge')
-  print
+if sys.platform != "win32":
+  if cmd[:7]=='install':
+    print
+    print '******** Installation Complete ******** '
+    print
+    print 'Sample files and documentation have been installed in:'
+    print '   ', DestDir
+    print
+    print 'A shortcut to starting the program has been installed as:'
+    print '   ', os.path.join(BinDir, 'gerbmerge')
+    print
