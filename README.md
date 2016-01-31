@@ -67,10 +67,10 @@
 This repository can generate a tarball for installation with PIP. In the repository, run:
 ```
 $ python setup.py sdist
-$ pip install dist/gerbmerge-1.9.3.tar.gz
+$ pip install dist/gerbmerge-1.9.4.tar.gz
 ```
 
-PIP will automatically resolve the dependencies. `-1.9.3` will change with the current tool version.
+PIP will automatically resolve the dependencies. `-1.9.4` will change with the current tool version.
 
 To easily run the installed package without looking up your python path, use python's "run module as script" feature:
 ```
@@ -81,60 +81,81 @@ $ python -m gerbmerge <args>
 <P><A NAME="Installation"></A></P>
 <H2>Installation</H2>
 
-<P>First, install all of the packages listed above in the Requirements section.
+<H3>Windows / Cygwin</H3>
+<p>Install Cygwin with <i>python</i>, <i>python-setuptools</i>, and <i>gcc</i> packages (gcc is needed
+for simpleparse). Launch Cygwin shell and install <i>pip</i>, then <i>simpleparse</i>:
+<ul>
+<pre>
+easy_install-x.y pip
+pip install simpleparse
+</pre>
+</ul>
+<p>(x.y is the current Python version)
+<p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder in Cygwin shell and run:
+<ul>
+<pre>
+python setyp.py sdist
+pip install dist/gerbmerge-1.9.4
+</pre>
+</ul>
+<p>Now you can use it by running <i>gerbmerge</i> in Cygwin shell.
 
-<H3>Windows</H3>
-<P>Run the <TT>gerbmerge1.8.exe</TT> installation program. I will assume
-you choose all of the default installation options. The installer
-will create and populate the following directories:</P>
-<UL>
-<PRE>
-c:\Python24\lib\site-packages\gerbmerge
-c:\Python24\gerbmerge
-</PRE>
-</UL>
-<P>The above assumes you have Python installed in <TT>C:\Python24</TT>. The
-first directory is where the actual program resides. The second directory
-contains the documentation, example files, etc. In the <TT>C:\Python24</TT>
-directory is a sample batch file <TT>GERBMERGE.BAT</TT> which shows you how to
-run the GerbMerge program.
+<p>To uninstall gerbmerge, launch Cygwin shell and run:
+<ul>
+<pre>
+pip uninstall gerbmerge
+</pre>
+</ul>
 
 <H3>Unix / Mac OS X</H3>
-<P>Extract the <TT>gerbmerge1.8.tar.gz</TT> file then install as follows:</P>
-<UL>
-<TT>python setup.py install</TT>&nbsp;&nbsp;&nbsp;(You may need to be root to install to system directories)
-</UL>
-<P>The installer will create and populate the following directories/files:</P>
-<UL>
-<PRE>
-/usr/local/lib/python2.4/site-packages/gerbmerge
-/usr/local/lib/python2.4/gerbmerge
-/usr/local/bin/gerbmerge
-</PRE>
-</UL>
-<P>The above assumes your Python library directory is as indicated (it may be
-elsewhere but the installer should be able to find it, so don't worry about
-it). The first directory is where the actual program resides. The second
-directory contains the documentation, example files, etc. A sample program for
-invoking GerbMerge is installed as <TT>/usr/local/bin/gerbmerge</TT>...feel free to move
-it somewhere else.
-<P>Not all Linux distributions are the same, however. If you have trouble, there is a useful set of instructions from <A HREF="http://blog.bhargavaz.us/2009/05/installing-gerbmerge-on-ubuntu-linux.html">Chetan Bhargava</A> for installing GerbMerge on Ubuntu distributions.
+<p>Install python and pip (recommended)
+Launch shell and install <i>simpleparse</i>:
+<ul>
+<pre>
+pip install simpleparse
+</pre>
+</ul>
+<p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
+<ul>
+<pre>
+python setyp.py sdist
+pip install dist/gerbmerge-1.9.4
+</pre>
+</ul>
+<p>Now you can use it by running <i>gerbmerge</i>.
+
+<p>To uninstall gerbmerge, open shell and run:
+<ul>
+<pre>
+pip uninstall gerbmerge
+</pre>
+</ul>
 
 <P><A NAME="Running"></A></P>
 <H2>Running GerbMerge</H2>
+
+<H3>Windows / Cygwin</H3>
+
+<p>Launch Cygwin shell and type
+<ul>
+<pre>
+gerbmerge
+</pre>
+</ul>
 
 <H3>Windows</H3>
 <P>Open a DOS box and invoke the Python interpreter on the <TT>gerbmerge.py</TT> file.
 Have a look at GERBMERGE.BAT (and put this on your Path somewhere) for an example.
 <PRE><CENTER>c:\python24\python c:\python24\lib\site-packages\gerbmerge\gerbmerge.py</CENTER></PRE>
+
 <H3>Unix / Mac OS X</H3>
-<P>You run GerbMerge by invoking the Python interpreter on the <TT>gerbmerge.py</TT>
-file of the <TT>gerbmerge</TT> package. For example:</P>
-<PRE><CENTER>python /usr/local/lib/python2.4/site-packages/gerbmerge/gerbmerge.py</CENTER></PRE>
-<P>The <TT>gerbmerge</TT> shell script that comes with this software contains an
-example for running GerbMerge, modelled on the above. By default, this shell
-script is installed in <TT>/usr/local/bin</TT> so you should just be able
-to type <TT>gerbmerge</TT> from a shell prompt.
+<p>Open shell and type
+<ul>
+<pre>
+gerbmerge
+</pre>
+</ul>
+
 <H3>Operation</H3>
 There are three ways to run GerbMerge:
 <OL><LI>By manually specifying the relative placement of jobs</LI>
