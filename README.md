@@ -108,8 +108,8 @@ pip uninstall gerbmerge
 </ul>
 
 <H3>Unix / Mac OS X</H3>
-<p>Install python and pip (recommended)
-Launch shell and install <i>simpleparse</i>:
+<p>Install python, gcc (required to build simpleparse), and pip (recommended)
+<p>Launch shell and install <i>simpleparse</i>:
 <ul>
 <pre>
 pip install simpleparse
