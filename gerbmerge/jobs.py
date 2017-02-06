@@ -714,6 +714,11 @@ class Job:
         # as T01 and sometimes as T1. We canonicalize to T01.
         currtool = 'T%02d' % int(currtool[1:])
 
+        # KiCad specific fixes
+        if currtool == 'T00':
+          continue
+        # end KiCad fixes
+
         # Diameter will be obtained from embedded tool definition, local tool list or if not found, the global tool list
         try:
           diam = self.xdiam[currtool]
