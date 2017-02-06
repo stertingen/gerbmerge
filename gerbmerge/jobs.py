@@ -102,6 +102,7 @@ XIgnoreList = ( \
   re.compile(r'^M30$'),   # End of job
   re.compile(r'^M48$'),   # Program header to first %
   re.compile(r'^M72$'),   # Inches
+  re.compile(r'^FMAT,2$'),# KiCad work-around
   re.compile(r'^G05$'),   # Drill Mode
   re.compile(r'^G90$')    # Absolute Mode
   )
@@ -713,6 +714,11 @@ class Job:
         # Canonicalize tool number because Protel (of course) sometimes specifies it
         # as T01 and sometimes as T1. We canonicalize to T01.
         currtool = 'T%02d' % int(currtool[1:])
+
+        # KiCad specific fixes
+        if currtool == 'T00':
+          continue
+        # end KiCad fixes
 
         # Diameter will be obtained from embedded tool definition, local tool list or if not found, the global tool list
         try:
