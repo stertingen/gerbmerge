@@ -102,6 +102,7 @@ XIgnoreList = ( \
   re.compile(r'^M30$'),   # End of job
   re.compile(r'^M48$'),   # Program header to first %
   re.compile(r'^M72$'),   # Inches
+  re.compile(r'^FMAT,2$'),# KiCad work-around
   re.compile(r'^G05$'),   # Drill Mode
   re.compile(r'^G90$')    # Absolute Mode
   )
