@@ -801,6 +801,7 @@ class Job:
     # (exposure off). This prevents an unintentional draw from the end
     # of one job to the beginning of the next when a layer is repeated
     # due to panelizing.
+    fid.write('%LPD*%')
     fid.write('X%07dY%07dD02*\n' % (X, Y))
     for cmd in self.commands[layername]:
       if type(cmd) is types.TupleType:
