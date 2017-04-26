@@ -95,7 +95,7 @@ pip install simpleparse
 <p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder in Cygwin shell and run:
 <ul>
 <pre>
-python setyp.py sdist
+python setup.py sdist
 pip install dist/gerbmerge-1.9.4.tar.gz
 </pre>
 </ul>
@@ -123,7 +123,7 @@ scripts\pip.exe install simpleparse
 <p><p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
 <ul>
 <pre>
-c:\python27\python.exe setyp.py sdist
+c:\python27\python.exe setup.py sdist
 c:\python27\scripts\pip.exe istall dist\gerbmerge-1.9.4.zip
 </pre>
 </ul>
@@ -148,7 +148,7 @@ sudo pip install simpleparse
 <p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
 <ul>
 <pre>
-python setyp.py sdist
+python setup.py sdist
 sudo pip istall dist/gerbmerge-1.9.4.tar.gz
 </pre>
 </ul>
