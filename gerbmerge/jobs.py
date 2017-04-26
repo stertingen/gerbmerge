@@ -89,6 +89,7 @@ IgnoreList = ( \
 # Patterns for Excellon interpretation
 xtool_pat = re.compile(r'^(T\d+)$')           # Tool selection
 xydraw_pat = re.compile(r'^X([+-]?\d+)Y([+-]?\d+)$')    # Plunge command
+xydraw_pat2 = re.compile(r'^X([+-]?\d+\.\d*)Y([+-]?\d+\.\d*)$')    # Plunge command
 xdraw_pat = re.compile(r'^X([+-]?\d+)$')    # Plunge command, repeat last Y value
 ydraw_pat = re.compile(r'^Y([+-]?\d+)$')    # Plunge command, repeat last X value
 xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter definition with optional
@@ -655,6 +656,13 @@ class Job:
         V.append(int(round(int(s)*divisor)))
       return tuple(V)
 
+    # Helper function to convert X/Y strings into integers in units of ten-thousandth of an inch.
+    def xln2tenthou2 (L, divisor=divisor, zeropadto=zeropadto):
+      V = []
+      for s in L:
+        V.append(int(float(s)*1000*divisor))
+      return tuple(V)
+
     for line in fid.xreadlines():
       # Get rid of CR characters
       line = string.replace(line, '\x0D', '')
@@ -744,6 +752,10 @@ class Job:
       if match:
         x, y = xln2tenthou(match.groups())
       else:
+        match = xydraw_pat2.match(line)
+        if match:
+          x, y = xln2tenthou2(match.groups())
+        else:
         match = xdraw_pat.match(line)
         if match:
           x = xln2tenthou(match.groups())[0]
