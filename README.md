@@ -92,7 +92,7 @@ pip install simpleparse
 </pre>
 </ul>
 <p>(x.y is the current Python version)
-<p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder in Cygwin shell and run:
+<p>Download and unpack <i>gerbmerge</i> sources, navigate to its folder in Cygwin shell and run:
 <ul>
 <pre>
 python setup.py sdist
@@ -120,7 +120,7 @@ scripts\pip.exe install simpleparse
 </pre>
 </ul>
 
-<p><p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
+<p><p>Download and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
 <ul>
 <pre>
 c:\python27\python.exe setup.py sdist
@@ -145,7 +145,7 @@ c:\python27\scripts\pip.exe uninstall gerbmerge
 sudo pip install simpleparse
 </pre>
 </ul>
-<p>Donwload and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
+<p>Download and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
 <ul>
 <pre>
 python setup.py sdist
