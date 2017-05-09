@@ -1,0 +1,3 @@
+Todo list
+
+- amacro.py: test multi-line macros, name groups in regexp for more readability
