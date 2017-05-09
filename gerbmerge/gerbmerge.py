@@ -27,6 +27,7 @@ import sys
 import os
 import getopt
 import re
+import zipfile
 
 import aptable
 import jobs
@@ -42,6 +43,7 @@ import schwartz
 import util
 import scoring
 import drillcluster
+import makestroke
 
 VERSION_MAJOR=1
 VERSION_MINOR='9b'
@@ -52,6 +54,8 @@ FROM_FILE = 3
 config.AutoSearchType = RANDOM_SEARCH
 config.RandomSearchExhaustiveJobs = 2
 config.PlacementFile = None
+
+_DEBUG = 1
 
 # This is a handle to a GUI front end, if any, else None for command-line usage
 GUI = None
@@ -91,56 +95,62 @@ the board outline layer for each job.
 
 # changed these two writeGerberHeader files to take metric units (mm) into account:
 
-def writeGerberHeader22degrees(fid):
+def writeGerberHeaderCommon(fid):
+  integerDigits = config.Config['gerberinteger']
+  fractionalDigits = config.Config['gerberdecimals']
+
   if config.Config['measurementunits'] == 'inch':
+    # MOIN for inch, G70 is depreciated
     fid.write( \
-"""G75*
-G70*
-%OFA0B0*%
-%FSLAX25Y25*%
-%IPPOS*%
-%LPD*%
-%AMOC8*
-5,1,8,0,0,1.08239X$1,22.5*
-%
+"""G70*
+%MOIN*%
 """)
   else:    # assume mm - also remove eagleware hack for %AMOC8
+    # MOMM for inch, G71 is depreciated
     fid.write( \
-"""G75*
-G71*
+"""G71*
 %MOMM*%
-%OFA0B0*%
-%FSLAX53Y53*%
+""")
+
+  #
+  fid.write( \
+"""%OFA0B0*%
+%FSLAX{0:1d}{1:1d}Y{0:1d}{1:1d}*%
 %IPPOS*%
 %LPD*%
+""".format(integerDigits, fractionalDigits))
+
+
+def writeGerberHeader22degrees(fid):
+  writeGerberHeaderCommon(fid)
+
+  if config.Config['measurementunits'] == 'inch':
+    # eagleware hack for %AMOC8
+    fid.write( \
+"""%AMOC8*
+5,1,8,0,0,1.08239x$1,22.5*
+%
 """)
+  #else:    # assume mm - also remove eagleware hack for %AMOC8
 
 
 def writeGerberHeader0degrees(fid):
+  writeGerberHeaderCommon(fid)
+
   if config.Config['measurementunits'] == 'inch':
+    # eagleware hack for %AMOC8
     fid.write( \
-"""G75*
-G70*
-%OFA0B0*%
-%FSLAX25Y25*%
-%IPPOS*%
-%LPD*%
-%AMOC8*
-5,1,8,0,0,1.08239X$1,0.0*
+"""%AMOC8*
+5,1,8,0,0,1.08239x$1,0.0*
 %
 """)
-  else:    # assume mm - also remove eagleware hack for %AMOC8
-    fid.write( \
-"""G75*
-G71*
-%MOMM*%
-%OFA0B0*%
-%FSLAX53Y53*%
-%IPPOS*%
-%LPD*%
-""")
+  #else:    # assume mm - also remove eagleware hack for %AMOC8
 
-writeGerberHeader = writeGerberHeader22degrees
+
+#def writeGerberHeader(fid):
+#  writeGerberHeader22degrees(fid)
+
+
 
 def writeApertureMacros(fid, usedDict):
   keys = config.GAMT.keys()
@@ -159,19 +169,39 @@ def writeApertures(fid, usedDict):
 def writeGerberFooter(fid):
   fid.write('M02*\n')
 
+
 def writeExcellonHeader(fid):
-  if config.Config['measurementunits'] != 'inch': # metric - mm
+  if config.Config['measurementunits'] == 'inch': # imperial - inch, six digits (00.0000) with 0.0001 inch (1/10,000) resolution
+    if config.Config['excellonleadingzeros'] == 0: # Trailing zeros, no leading zeros
+      fid.write( \
+                "M48\n" \
+                "INCH,TZ\n")
+    else: # Leading zeros, no trailing zeros
+      fid.write( \
+                "M48\n" \
+                "INCH,LZ\n")
+  else: # metric - mm, six digit 10 micron resolution (0000.00)
     fid.write( \
-"""M48
-METRIC,0000.00
-""")
+              "M48\n" \
+              "METRIC,0000.00\n")
+
+
+def writeExcellonEndHeader(fid):
   fid.write('%\n')
+
 
 def writeExcellonFooter(fid):
   fid.write('M30\n')
 
-def writeExcellonTool(fid, tool, size):
-  fid.write('%sC%f\n' % (tool, size))
+
+def writeExcellonToolInformation(fid, tool, size):
+  size_str = '{0:f}'.format(size).lstrip('0').rstrip('0').rstrip('.')   # Remove trailing and leading zeros
+  fid.write('{0}C{1}\n'.format(tool, size_str))
+
+def writeExcellonTool(fid, tool):
+  fid.write('{0}\n'.format(tool))
+
+
 
 def writeFiducials(fid, drawcode, OriginX, OriginY, MaxXExtent, MaxYExtent):
   """Place fiducials at arbitrary points. The FiducialPoints list in the config specifies
@@ -192,7 +222,7 @@ def writeFiducials(fid, drawcode, OriginX, OriginY, MaxXExtent, MaxYExtent):
       y += OriginX
     else:
       y = MaxYExtent + y
-    fid.write('X%07dY%07dD03*\n' % (util.in2gerb(x), util.in2gerb(y)))
+    fid.write('X{0}Y{1}D03*\n'.format(util.in2gerber_str(x), util.in2gerber_str(y)))
 
 def writeCropMarks(fid, drawing_code, OriginX, OriginY, MaxXExtent, MaxYExtent):
   """Add corner crop marks on the given layer"""
@@ -217,69 +247,69 @@ def writeCropMarks(fid, drawing_code, OriginX, OriginY, MaxXExtent, MaxYExtent):
   # Lower-left
   x = OriginX + offset
   y = OriginY + offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x+cropW), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+cropW)))
+  fid.write('X{0}Y{1}D02*\n'.format(util.in2gerber_str(x+cropW), util.in2gerber_str(y+0.000)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y+0.000)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y+cropW)))
 
   # Lower-right
   x = MaxXExtent - offset
   y = OriginY + offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+cropW)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x-cropW), util.in2gerb(y+0.000)))
+  fid.write('X{0}Y{1}D02*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y+cropW)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y+0.000)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x-cropW), util.in2gerber_str(y+0.000)))
 
   # Upper-right
   x = MaxXExtent - offset
   y = MaxYExtent - offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x-cropW), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y-cropW)))
+  fid.write('X{0}Y{1}D02*\n'.format(util.in2gerber_str(x-cropW), util.in2gerber_str(y+0.000)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y+0.000)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y-cropW)))
 
   # Upper-left
   x = OriginX + offset
   y = MaxYExtent - offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x+0.000), util.in2gerb(y-cropW)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+cropW), util.in2gerb(y+0.000)))
+  fid.write('X{0}Y{1}D02*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y-cropW)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+0.000), util.in2gerber_str(y+0.000)))
+  fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(x+cropW), util.in2gerber_str(y+0.000)))
 
 def disclaimer():
   if (config.Config['skipdisclaimer'] > 0): # remove annoying disclaimer
     return 
 
-  print """
-****************************************************
-*           R E A D    C A R E F U L L Y           *
-*                                                  *
-* This program comes with no warranty. You use     *
-* this program at your own risk. Do not submit     *
-* board files for manufacture until you have       *
-* thoroughly inspected the output of this program  *
-* using a previewing program such as:              *
-*                                                  *
-* Windows:                                         *
-*          - GC-Prevue <http://www.graphicode.com> *
-*          - ViewMate  <http://www.pentalogix.com> *
-*                                                  *
-* Linux:                                           *
-*          - gerbv <http://gerbv.sourceforge.net>  *
-*                                                  *
-* By using this program you agree to take full     *
-* responsibility for the correctness of the data   *
-* that is generated by this program.               *
-****************************************************
+#   print """
+# ****************************************************
+# *           R E A D    C A R E F U L L Y           *
+# *                                                  *
+# * This program comes with no warranty. You use     *
+# * this program at your own risk. Do not submit     *
+# * board files for manufacture until you have       *
+# * thoroughly inspected the output of this program  *
+# * using a previewing program such as:              *
+# *                                                  *
+# * Windows:                                         *
+# *          - GC-Prevue <http://www.graphicode.com> *
+# *          - ViewMate  <http://www.pentalogix.com> *
+# *                                                  *
+# * Linux:                                           *
+# *          - gerbv <http://gerbv.sourceforge.net>  *
+# *                                                  *
+# * By using this program you agree to take full     *
+# * responsibility for the correctness of the data   *
+# * that is generated by this program.               *
+# ****************************************************
 
-To agree to the above terms, press 'y' then Enter.
-Any other key will exit the program.
+# To agree to the above terms, press 'y' then Enter.
+# Any other key will exit the program.
 
-"""
+# """
 
-  s = raw_input()
-  if s == 'y':
-    print
-    return
+#   s = raw_input()
+#   if s == 'y':
+#     print
+#     return
 
-  print "\nExiting..."
-  sys.exit(0)
+#   print "\nExiting..."
+#   sys.exit(0)
 
 def tile_jobs(Jobs):
   """Take a list of raw Job objects and find best tiling by calling tile_search"""
@@ -482,6 +512,9 @@ def merge(opts, args, gui = None):
   if drawing_code1 is None:
     drawing_code1 = aptable.addToApertureTable(AP)
 
+
+
+
   updateGUI("Writing merged files...")
   print 'Writing merged output files ...'
 
@@ -495,7 +528,9 @@ def merge(opts, args, gui = None):
     except KeyError:
       fullname = 'merged.%s.ger' % lname
     OutputFiles.append(fullname)
-    #print 'Writing %s ...' % fullname
+
+    print 'Writing %s ...' % fullname
+
     fid = file(fullname, 'wt')
     writeGerberHeader(fid)
     
@@ -558,6 +593,19 @@ def merge(opts, args, gui = None):
     #    fid.write('%s*\n' % drawing_code_cut)    # Choose drawing aperture
     #    row.writeCutLines(fid, drawing_code_cut, OriginX, OriginY, MaxXExtent, MaxYExtent)
 
+    # Write scorings in layer if needed
+    if config.Config['scoringlayers'] and (layername in config.Config['scoringlayers']):
+      # Write width-1 aperture to file
+      AP = aptable.Aperture(aptable.Circle, 'D10', 0.001)
+      AP.writeDef(fid)
+
+      # Choose drawing aperture D10
+      fid.write('D10*\n')
+
+      # Draw the scoring lines
+      scoring.writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent)
+
+
     # Finally, write actual flash data
     for job in Place.jobs:
     
@@ -602,11 +650,11 @@ def merge(opts, args, gui = None):
     fid.write('D10*\n')
 
     # Draw the rectangle
-    fid.write('X%07dY%07dD02*\n' % (util.in2gerb(OriginX), util.in2gerb(OriginY)))        # Bottom-left
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(OriginX), util.in2gerb(MaxYExtent)))     # Top-left
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(MaxXExtent), util.in2gerb(MaxYExtent)))  # Top-right
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(MaxXExtent), util.in2gerb(OriginY)))     # Bottom-right
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(OriginX), util.in2gerb(OriginY)))        # Bottom-left
+    fid.write('X{0}Y{1}D02*\n'.format(util.in2gerber_str(OriginX), util.in2gerber_str(OriginY)))        # Bottom-left
+    fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(OriginX), util.in2gerber_str(MaxYExtent)))     # Top-left
+    fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(MaxXExtent), util.in2gerber_str(MaxYExtent)))  # Top-right
+    fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(MaxXExtent), util.in2gerber_str(OriginY)))     # Bottom-right
+    fid.write('X{0}Y{1}D01*\n'.format(util.in2gerber_str(OriginX), util.in2gerber_str(OriginY)))        # Bottom-left
 
     writeGerberFooter(fid)
     fid.close()
@@ -684,16 +732,30 @@ def merge(opts, args, gui = None):
     writeGerberFooter(fid)
     fid.close()
     
+
+
   # Finally, print out the Excellon
   try:
     fullname = config.MergeOutputFiles['drills']
   except KeyError:
     fullname = 'merged.drills.xln'
+
   OutputFiles.append(fullname)
   #print 'Writing %s ...' % fullname
   fid = file(fullname, 'wt')
 
   writeExcellonHeader(fid)
+
+  for tool in Tools:
+    try:
+      size = config.GlobalToolMap[tool]
+    except:
+      raise RuntimeError, "INTERNAL ERROR: Tool code %s not found in global tool map" % tool
+      
+    writeExcellonToolInformation(fid, tool, size)
+
+  writeExcellonEndHeader(fid)
+
 
   # Ensure each one of our tools is represented in the tool list specified
   # by the user.
@@ -702,8 +764,8 @@ def merge(opts, args, gui = None):
       size = config.GlobalToolMap[tool]
     except:
       raise RuntimeError, "INTERNAL ERROR: Tool code %s not found in global tool map" % tool
-      
-    writeExcellonTool(fid, tool, size)
+
+    writeExcellonTool(fid, tool)
 
     #for row in Layout:
     #  row.writeExcellon(fid, size)
@@ -713,6 +775,34 @@ def merge(opts, args, gui = None):
   writeExcellonFooter(fid)
   fid.close()
   
+
+
+  updateGUI("Zipping files...")
+
+  print 'Zipping files ...'
+
+  zipfilename = config.ZipOutputFiles['zipfile']
+  if zipfilename is not None:
+    zipCount = 0
+    # Override zip file
+    with zipfile.ZipFile(zipfilename, 'w') as zip:
+
+      for layername in config.ZipOutputFiles['layers']:
+        try:
+          fullname = config.MergeOutputFiles[layername]
+        except KeyError:
+          print '  Zipping layer {0} failed: layer is not in "MergeOutputFiles"'.format(layername)
+          continue
+
+        print '  Zipping %s ...' % fullname
+        zip.write(fullname)
+        zipCount = zipCount+1
+
+      OutputFiles.append(zipfilename)
+      print 'Zipped {0} files to {1}.'.format(zipCount, zipfilename)
+
+
+
   updateGUI("Closing files...")
 
   # Compute stats
@@ -803,6 +893,8 @@ def updateGUI(text = None):
   global GUI
   if GUI != None:
     GUI.updateProgress(text)
+
+
 
 if __name__=="__main__":
   try:

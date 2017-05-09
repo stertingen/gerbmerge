@@ -47,16 +47,14 @@ apmdef_pat = re.compile(r'^%AM([^*$]+)\*$')           # Aperture macro definitio
 comment_pat = re.compile(r'G0?4[^*]*\*')              # Comment (GerbTool comment omits the 0)
 tool_pat  = re.compile(r'(D\d+)\*')                   # Aperture selection
 gcode_pat = re.compile(r'G(\d{1,2})\*?')              # G-codes
-drawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)D0?([123])\*')  # Drawing command
-drawX_pat  = re.compile(r'X([+-]?\d+)D0?([123])\*')        # Drawing command, Y is implied
-drawY_pat  = re.compile(r'Y([+-]?\d+)D0?([123])\*')        # Drawing command, X is implied
+
+drawXYf_pat = re.compile(r'(?:X([+-]?\d+))?(?:Y([+-]?\d+))?(?:D0?([123]))?\*')  # Drawing command
+
 format_pat = re.compile(r'%FS(L|T)?(A|I)(N\d+)?(X\d\d)(Y\d\d)\*%')  # Format statement
 layerpol_pat = re.compile(r'^%LP[CD]\*%')             # Layer polarity (D=dark, C=clear)
 
-# Circular interpolation drawing commands (from Protel)
-cdrawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')
-cdrawX_pat  = re.compile(r'X([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')  # Y is implied
-cdrawY_pat  = re.compile(r'Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')  # X is implied
+# Circular interpolation drawing commands
+cdrawXYf_pat = re.compile(r'(?:X([+-]?\d+))?(?:Y([+-]?\d+))?(?:I([+-]?\d+))?(?:J([+-]?\d+))?(?:D0?([123]))?\*')
 
 IgnoreList = ( \
   # These are for Eagle, and RS274X files in general
@@ -93,8 +91,10 @@ XIgnoreList = ( \
   re.compile(r'^%$'),
   re.compile(r'^M30$'),   # End of job
   re.compile(r'^M48$'),   # Program header to first %
-  re.compile(r'^M72$')    # Inches
+  re.compile(r'^M72$'),   # Inches
+  re.compile(r'^G81$')    # G81 before header in DesignSpark PCB
   )
+
 
 # A Job is a single input board. It is expected to have:
 #    - a board outline file in RS274X format
@@ -266,7 +266,7 @@ class Job:
     RevGAT = config.buildRevDict(GAT)     # RevGAT[hash] = aperturename
     RevGAMT = config.buildRevDict(GAMT)   # RevGAMT[hash] = aperturemacroname
 
-    #print 'Reading data from %s ...' % fullname
+    print 'Parsing Gerber file %s ...' % fullname
 
     fid = file(fullname, 'rt')
     currtool = None
@@ -287,6 +287,7 @@ class Job:
     # the same as before. These variables store the last X/Y value as
     # integers in hundred-thousandths of an inch.
     last_x = last_y = 0
+    last_d = 1
 
     # Last modal G-code. Some G-codes introduce "modes", such as circular interpolation
     # mode, and we want to remember what mode we're in. We're interested in:
@@ -311,6 +312,7 @@ class Job:
     # we use the following Boolean flag as well as the isLastShorthand flag during parsing
     # to manually insert the point X000000Y00000 into the command stream.
     firstFlash = True
+    lineNumber = 0
 
     for line in fid:
       # Get rid of CR characters (0x0D) and leading/trailing blanks
@@ -353,7 +355,7 @@ class Job:
       if line[:7]=='%AMOC8*':
         continue
 
-# DipTrace specific fixes, but could be emitted by any CAD program. They are Standard Gerber RS-274X
+    # DipTrace specific fixes, but could be emitted by any CAD program. They are Standard Gerber RS-274X
       # a hack to fix lack of recognition for metric direction from DipTrace - %MOMM*%
       if (line[:7] == '%MOMM*%'):
         if (config.Config['measurementunits'] == 'inch'):
@@ -366,7 +368,7 @@ class Job:
         print 'Scale factor parameter ignored: ' + line
         continue
       
-# end basic diptrace fixes
+    # end basic diptrace fixes
 
       # See if this is an aperture macro definition, and if so, map it.
       M = amacro.parseApertureMacro(line,fid)
@@ -459,7 +461,7 @@ class Job:
               circ_signed = False
             elif gcode==75:
               circ_signed = True
-              
+            
             continue
 
           raise RuntimeError, "G-Code 'G%02d' is not supported" % gcode
@@ -469,8 +471,8 @@ class Job:
         if match:
           currtool = match.group(1)
 
-# Diptrace hack
-# There is a D2* command in board outlines. I believe this should be D02. Let's change it then when it occurs:
+          # Diptrace hack
+          # There is a D2* command in board outlines. I believe this should be D02. Let's change it then when it occurs:
           if (currtool == 'D1'):
             currtool = 'D01'
           if (currtool == 'D2'):
@@ -496,7 +498,7 @@ class Job:
 
           # Map it using our translation table
           if not self.apxlat[layername].has_key(currtool):
-            raise RuntimeError, 'File %s has tool change command "%s" with no corresponding translation' % (fullname, currtool)
+            raise RuntimeError, 'File %s has tool change command "%s" with no corresponding translation (in %s)' % (fullname, currtool, sub_line)
 
           currtool = self.apxlat[layername][currtool]
 
@@ -511,41 +513,67 @@ class Job:
           continue
 
         # Is it a simple draw command?
-        I = J = None  # For circular interpolation drawing commands
-        match = drawXY_pat.match(sub_line)
-        isLastShorthand = False    # By default assume we don't make use of last_x and last_y
+        I = J = None  # For circular interpolation drawing commands, if not specified it defaults to 0 (set to none if not a circular interpolation)
+        match = drawXYf_pat.match(sub_line)
+        isLastShorthand = False     # By default assume we don't make use of last_x and last_y
+
         if match:
-          x, y, d = map(__builtin__.int, match.groups())
-        else:
-          match = drawX_pat.match(sub_line)
-          if match:
-            x, d = map(__builtin__.int, match.groups())
+          #x, y, d = map(__builtin__.int, match.groups())
+          x_, y_, d_ = match.groups()
+
+          if x_ is None:
+            x = last_x
+            isLastShorthand = True  # Indicate we're making use of last_x/last_y
+          else:
+            x = int(x_)
+
+          if y_ is None:
             y = last_y
             isLastShorthand = True  # Indicate we're making use of last_x/last_y
           else:
-            match = drawY_pat.match(sub_line)
-            if match:
-              y, d = map(__builtin__.int, match.groups())
-              x = last_x
-              isLastShorthand = True  # Indicate we're making use of last_x/last_y
+            y = int(y_)
+
+          if d_ is None:
+            d = last_d
+          else:
+            d = int(d_)
+
+          # At least X or Y should be there
+          if x_ is None and y_ is None:
+            match = None  # Make the match failed
+
 
         # Maybe it's a circular interpolation draw command with IJ components
         if match is None:
-          match = cdrawXY_pat.match(sub_line)
+          match = cdrawXYf_pat.match(sub_line)
           if match:
-            x, y, I, J, d = map(__builtin__.int, match.groups())
-          else:
-            match = cdrawX_pat.match(sub_line)
-            if match:
-              x, I, J, d = map(__builtin__.int, match.groups())
+            x_, y_, I_, J_, d_ = match.groups()
+            if x_ is None:
+              x = last_x
+              isLastShorthand = True  # Indicate we're making use of last_x/last_y
+            else:
+              x = int(x_)
+
+            if y_ is None:
               y = last_y
               isLastShorthand = True  # Indicate we're making use of last_x/last_y
             else:
-              match = cdrawY_pat.match(sub_line)
-              if match:
-                y, I, J, d = map(__builtin__.int, match.groups())
-                x = last_x
-                isLastShorthand = True  # Indicate we're making use of last_x/last_y
+              y = int(y_)
+
+            if I_ is None:
+              I = 0   # 0 if not specified (Gerber spec 2017.03)
+            else:
+              I = int(I_)
+
+            if J_ is None:
+              J = 0   # 0 if not specified (Gerber spec 2017.03)
+            else:
+              J = int(J_)
+
+            if d_ is None:
+              d = last_d
+            else:
+              d = int(d_)
 
         if match:
           if currtool is None:
@@ -559,6 +587,7 @@ class Job:
           # flashes (e.g., Y with no X) will be scaled twice!
           last_x = x
           last_y = y
+          last_d = d
 
           # Corner case: if this is the first flash/draw and we are using shorthand (i.e., missing Xxxx
           # or Yxxxxx) then prepend the point X0000Y0000 into the commands as it is actually the starting
@@ -573,7 +602,7 @@ class Job:
 
           x = int(round(x*x_div))
           y = int(round(y*y_div))
-          if I is not None:
+          if I is not None and J is not None:
             I = int(round(I*x_div))
             J = int(round(J*y_div))
             self.commands[layername].append((x,y,I,J,d,circ_signed))
@@ -605,7 +634,7 @@ class Job:
         sub_line = sub_line[match.end():]
       # end while still things to match on this line
     # end of for each line in file
-
+ 
     fid.close()
     if 0:
       print layername
@@ -613,6 +642,7 @@ class Job:
 
   def parseExcellon(self, fullname):
     #print 'Reading data from %s ...' % fullname
+    print 'Parsing Excellon file %s ...' % fullname
 
     fid = file(fullname, 'rt')
     currtool = None
@@ -648,17 +678,26 @@ class Job:
       # Get rid of CR characters
       line = string.replace(line, '\x0D', '')
 
-# add support for DipTrace
+    # add support for DipTrace
       if line[:6]=='METRIC':
         if (config.Config['measurementunits'] == 'inch'):
-          raise RuntimeError, "File %s units do match config file" % fullname
+          raise RuntimeError, "File %s units do match config file (should be inch)" % fullname
         else:
         #print "ignoring METRIC directive: " + line
           continue # ignore it so func doesn't choke on it
 
-      if line[:3] == 'T00': # a tidying up that we can ignore
-        continue
-# end metric/diptrace support
+      #if line[:3] == 'T00': # a tidying up that we can ignore
+        #continue
+    # end metric/diptrace support
+
+    # add DesignSpark PCB support
+      if line[:4]=='INCH':
+        if (config.Config['measurementunits'] == 'metric'):
+          raise RuntimeError, "File %s units do match config file (should be metric)" % fullname
+        else:
+        #print "ignoring INCH directive: " + line
+          continue # ignore it so func doesn't choke on it
+    # end DesignSpark PCB support
 
       # Protel likes to embed comment lines beginning with ';'
       if line[0]==';':
@@ -699,6 +738,9 @@ class Job:
       match = xtool_pat.match(line)
       if match:
         currtool = match.group(1)
+
+        if int(currtool[1:]) == 0:
+          continue
 
         # Canonicalize tool number because Protel (of course) sometimes specifies it
         # as T01 and sometimes as T1. We canonicalize to T01.
@@ -761,6 +803,7 @@ class Job:
   def hasLayer(self, layername):
     return self.commands.has_key(layername)
 
+
   def writeGerber(self, fid, layername, Xoff, Yoff):
     "Write out the data such that the lower-left corner of this job is at the given (X,Y) position, in inches"
     
@@ -770,8 +813,8 @@ class Job:
     # add metric support (1/1000 mm vs. 1/100,000 inch)
     if config.Config['measurementunits'] == 'inch':
       # First convert given inches to 2.5 co-ordinates
-      X = int(round(Xoff/0.00001))
-      Y = int(round(Yoff/0.00001))
+      X = util.in2gerb(Xoff) #int(round(Xoff/0.00001))
+      Y = util.in2gerb(Yoff) #int(round(Yoff/0.00001))
     else:
       # First convert given mm to 5.3 co-ordinates
       X = int(round(Xoff/0.001))
@@ -785,29 +828,63 @@ class Job:
     # (exposure off). This prevents an unintentional draw from the end
     # of one job to the beginning of the next when a layer is repeated
     # due to panelizing.
-    fid.write('X%07dY%07dD02*\n' % (X, Y))
+
+    fid.write('X{0}Y{1}D02*\n'.format(util.gerber_str(X), util.gerber_str(Y)))
+
+
+    last_x = last_y = None # Optimize and output coordinates only when needed
+
     for cmd in self.commands[layername]:
       if type(cmd) is types.TupleType:
-        if len(cmd)==3:
+        if len(cmd) == 3:
           x, y, d = cmd
-          fid.write('X%07dY%07dD%02d*\n' % (x+DX, y+DY, d))
+
+          if last_x is None or x != last_x:
+            fid.write('X{0}'.format(util.gerber_str(x+DX)))
+
+          if last_y is None or y != last_y:
+            fid.write('Y{0}'.format(util.gerber_str(y+DY)))
+
+          fid.write('D{0:02d}*\n'.format(d))
+
+          last_x = x
+          last_y = y
+
         else:
           x, y, I, J, d, s = cmd
-          fid.write('X%07dY%07dI%07dJ%07dD%02d*\n' % (x+DX, y+DY, I, J, d)) # I,J are relative
+
+          if last_x is None or x != last_x:
+            fid.write('X{0}'.format(util.gerber_str(x+DX)))
+
+          if last_y is None or y != last_y:
+            fid.write('Y{0}'.format(util.gerber_str(y+DY)))
+
+          if I != 0:
+            fid.write('I{0}'.format(util.gerber_str(I))) # I,J are relative
+
+          if J != 0:
+            fid.write('J{0}'.format(util.gerber_str(J))) # I,J are relative
+
+          fid.write('D{0:02d}*\n'.format(d))
+
+          last_x = x
+          last_y = y
+
       else:
         # It's an aperture change, G-code, or RS274-X command that begins with '%'. If
         # it's an aperture code, the aperture has already been translated
         # to the global aperture table during the parse phase.
-        if cmd[0]=='%':
+        if cmd[0] == '%':
           fid.write('%s\n' % cmd)  # The command already has a * in it (e.g., "%LPD*%")
         else:
           fid.write('%s*\n' % cmd)
+
 
   def findTools(self, diameter):
     "Find the tools, if any, with the given diameter in inches. There may be more than one!"
     L = []
     for tool, diam in self.xdiam.items():
-      if diam==diameter:
+      if diam == diameter:
         L.append(tool)
     return L
 
@@ -837,17 +914,13 @@ class Job:
 
     ltools = self.findTools(diameter)
 
-    if config.Config['excellonleadingzeros']:
-      fmtstr = 'X%06dY%06d\n'
-    else:
-      fmtstr = 'X%dY%d\n'
-
     # Boogie
     for ltool in ltools:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
           x, y = cmd
-          fid.write(fmtstr % (x+DX, y+DY))
+          fid.write('X{0}Y{1}\n'.format(util.excellon_str(x+DX), util.excellon_str(y+DY)))
+
 
   def writeDrillHits(self, fid, diameter, toolNum, Xoff, Yoff):
     """Write a drill hit pattern. diameter is tool diameter in inches, while toolNum is
@@ -925,7 +998,7 @@ class Job:
           # x, y, I, J, d, s = cmd
           newcmds.append(cmd)
           continue
-
+        
         newInBorders = self.inBorders(x,y)
 
         # Flash commands are easy (for now). If they're outside borders,
@@ -966,11 +1039,11 @@ class Job:
                 # We arbitrarily remove all flashes that lead to rectangles
                 # with a width or length less than 1 mil (10 Gerber units). - sdd s.b. 0.1mil???
                 # Should we make this configurable?
-# add metric support (1/1000 mm vs. 1/100,000 inch)
-#                if config.Config['measurementunits'] == 'inch':
-#                  minFlash = 10;
-#                else
-#                  minFlash = 
+                # add metric support (1/1000 mm vs. 1/100,000 inch)
+               # if config.Config['measurementunits'] == 'inch':
+               #   minFlash = 10;
+               # else
+               #   minFlash = 
                 if min(newRectWidth, newRectHeight) >= 10: # sdd - change for metric case at some point
                   # Construct an Aperture that is a Rectangle of dimensions (newRectWidth,newRectHeight)
                   newAP = aptable.Aperture(aptable.Rectangle, 'D??', \
@@ -1142,7 +1215,7 @@ class JobLayout:
 
 #if job has a boardoutline layer, write it, else calculate one
     outline_layer = 'boardoutline';
-    if self.job.hasLayer(outline_layer):     
+    if self.job.hasLayer(outline_layer):
       # somewhat of a hack here; making use of code in gerbmerge, around line 516,
       # we are going to replace the used of the existing draw code in the boardoutline
       # file with the one passed in (which was created from layout.cfg ('CutLineWidth')
@@ -1208,20 +1281,21 @@ class JobLayout:
       # unnecessary. Heck, we could even just use the boardoutline layer
       # directly.
       if 1 or left:
-        fid.write('X%07dY%07dD02*\n' % BL)
-        fid.write('X%07dY%07dD01*\n' % TL)
+        fid.write('X{0}Y{1}D02*\n'.format(*BL))
+        fid.write('X{0}Y{1}D02*\n'.format(*BL))
+        fid.write('X{0}Y{1}D01*\n'.format(*TL))
 
       if 1 or top:
-        if not left: fid.write('X%07dY%07dD02*\n' % TL)
-        fid.write('X%07dY%07dD01*\n' % TR)
+        if not left: fid.write('X{0}Y{1}D02*\n'.format(*TL))
+        fid.write('X{0}Y{1}D01*\n'.format(*TR))
 
       if 1 or right:
-        if not top: fid.write('X%07dY%07dD02*\n' % TR)
-        fid.write('X%07dY%07dD01*\n' % BR)
+        if not top: fid.write('X{0}Y{1}D02*\n'.format(*TR))
+        fid.write('X{0}Y{1}D01*\n'.format(*BR))
 
       if 1 or bot:
-        if not right: fid.write('X%07dY%07dD02*\n' % BR)
-        fid.write('X%07dY%07dD01*\n' % BL)
+        if not right: fid.write('X{0}Y{1}D02*\n'.format(*BR))
+        fid.write('X{0}Y{1}D01*\n'.format(*BL))
 
   def setPosition(self, x, y):
     self.x=x

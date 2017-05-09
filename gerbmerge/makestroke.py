@@ -12,6 +12,7 @@ http://ruggedcircuits.com/gerbmerge
 import math
 
 import strokes
+import config
 
 # Define percentage of cell height and width to determine
 # intercharacter spacing
@@ -43,6 +44,9 @@ ArrowGlyph = [ [(0,-BarLength/2), (0, BarLength/2)],
                [(0,0), (ArrowStemLength,0)]
              ]
 
+def setZeroFillCount(fill):
+  ZeroFillCount = fill
+
 def rotateGlyph(glyph, degrees, glyphName):
   """Rotate a glyph counterclockwise by given number of degrees. The glyph
   is a list of lists, where each sub-list is a connected path."""
@@ -68,7 +72,9 @@ def rotateGlyph(glyph, degrees, glyphName):
   return newglyph
 
 def writeFlash(fid, X, Y, D):
-  fid.write("X%07dY%07dD%02d*\n" % (X,Y,D))
+  X_str = str(X).zfill(config.ZeroFillCount)
+  Y_str = str(Y).zfill(config.ZeroFillCount)
+  fid.write("X{0}Y{1}D{2:02d}*\n".format(X_str,Y_str,D))
 
 def drawPolyline(fid, L, offX, offY, scale=1):
   for ix in range(len(L)):
@@ -134,6 +140,8 @@ def drawDimensionArrow(fid, X, Y, facing):
   
 def drawDrillHit(fid, X, Y, toolNum):
   writeGlyph(fid, strokes.DrillStrokeList[toolNum], X, Y, 0, "Drill%02d" % toolNum)
+
+
 
 if __name__=="__main__":
   import string

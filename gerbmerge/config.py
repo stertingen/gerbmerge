@@ -39,10 +39,12 @@ Config = {
    'allowmissinglayers': 0,          # Set to 1 to allow multiple jobs to have non-matching layers
    'fabricationdrawingfile': None,   # Name of file to which to write fabrication drawing, or None
    'fabricationdrawingtext': None,   # Name of file containing text to write to fab drawing
+   'excelloninteger': 2, 
    'excellondecimals': 4,            # Number of digits after the decimal point in input Excellon files
    'excellonleadingzeros': 0,        # Generate leading zeros in merged Excellon output file
    'outlinelayerfile': None,         # Name of file to which to write simple box outline, or None
    'scoringfile': None,              # Name of file to which to write scoring data, or None
+   'scoringlayers': None,            # Name of layer to which to write scoring data, or None
    'leftmargin': 0,                  # Inches of extra room to leave on left side of panel for tooling
    'topmargin': 0,                   # Inches of extra room to leave on top side of panel for tooling
    'rightmargin': 0,                 # Inches of extra room to leave on right side of panel for tooling
@@ -50,6 +52,15 @@ Config = {
    'fiducialpoints': None,           # List of X,Y co-ordinates at which to draw fiducials
    'fiducialcopperdiameter': 0.08,   # Diameter of copper part of fiducial
    'fiducialmaskdiameter': 0.32,     # Diameter of fiducial soldermask opening
+
+   'gerberinteger': 2,
+   'gerberdecimals': 5,
+   'gerberleadingzeros': 1,          # Generate leading zeros in merged Gerber output files
+
+   'inputgerberinteger': None,       # Number of digits in the integer part for the coordinates format
+   'inputgerberdecimals': None,      # Number of digits in the fractional part for the coordinates format
+
+   'zipfile': None,                  # Name of zip file
    }
 
 # This dictionary is indexed by lowercase layer name and has as values a file
@@ -60,6 +71,8 @@ MergeOutputFiles = {
   'placement':    'merged.placement.txt',
   'toollist':     'merged.toollist.drl'
   }
+
+ZipOutputFiles = {}
 
 # The global aperture table, indexed by aperture code (e.g., 'D10')
 GAT = {}
@@ -108,6 +121,9 @@ MinimumFeatureDimension = {}
 
 # moved to setting that can be loaded from config file
 #SearchTimeout = 0
+
+ZeroFillCount = 0
+ExcellonZeroFillCount = 6
 
 # Construct the reverse-GAT/GAMT translation table, keyed by aperture/aperture macro
 # hash string. The value is the aperture code (e.g., 'D10') or macro name (e.g., 'M5').
@@ -259,7 +275,31 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
     Config['cutlinelayers'] = parseStringList(Config['cutlinelayers'])
   if Config['cropmarklayers']:
     Config['cropmarklayers'] = parseStringList(Config['cropmarklayers'])
+
+
+  # Setup default input gerber coordinates format
+  if Config['inputgerberinteger'] is None:
+    Config['inputgerberinteger'] = Config['gerberinteger']
+    print 'Using input integer digits coordinates format same as output (%s)' % Config['inputgerberinteger']
+
+  if Config['inputgerberdecimals'] is None:
+    Config['inputgerberdecimals'] = Config['gerberdecimals']
+    print 'Using input fractional digits coordinates format same as output (%s)' % Config['inputgerberdecimals']
+
+
+  global ZeroFillCount
+  if Config['gerberleadingzeros'] == 0:
+    ZeroFillCount = 0
+  else:
+    ZeroFillCount = int(Config['gerberinteger']) + int(Config['gerberdecimals'])
+
+  global ExcellonZeroFillCount
+  if Config['excellonleadingzeros'] == 0:
+    ExcellonZeroFillCount = 0
+  else:
+    ExcellonZeroFillCount = int(Config['excelloninteger']) + int(Config['excellondecimals'])
     
+
 # setup default x & y spacing, taking into account metric units
 #    if (xspacing == 0):
 #      if (Config['measurementunits'] == 'inch'):
@@ -289,6 +329,26 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
       if opt[0]=='*' or opt in ('boardoutline', 'drills', 'placement', 'toollist'):
         MergeOutputFiles[opt] = CP.get('MergeOutputFiles', opt)
 
+
+
+  # Process ZipOutputFiles section to set layers to zip
+  if CP.has_section('ZipOutputFiles'):
+    opt = 'ZipOutputFiles'
+    if CP.has_option(opt, 'zipfile'):
+      ZipOutputFiles['zipfile'] = CP.get(opt, 'zipfile')
+
+      if CP.has_option(opt, 'ziplayers'):
+        layerNames = []
+        for layer in parseStringList(CP.get(opt, 'ziplayers')):
+          layerNames.append(layer.lower())
+
+        ZipOutputFiles['layers'] = layerNames
+
+      else:
+        raise RuntimeError, "Zip file specified but no layer list to zip (use option ZipLayers = <layer1>, <layer2>, ...)"
+
+
+
   # Now, we go through all jobs and collect Gerber layers
   # so we can construct the Global Aperture Table.
   apfiles = []
@@ -297,6 +357,7 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
     if jobname=='Options': continue
     if jobname=='MergeOutputFiles': continue
     if jobname=='GerbMergeGUI': continue
+    if jobname=='ZipOutputFiles': continue
 
     # Ensure all jobs have a board outline
     if not CP.has_option(jobname, 'boardoutline'):
@@ -346,6 +407,7 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
     if jobname=='Options': continue
     if jobname=='MergeOutputFiles': continue
     if jobname=='GerbMergeGUI': continue
+    if jobname=='ZipOutputFiles': continue
 
     print '' # empty line before hand for readability
     print 'Reading data from', jobname, '...'
@@ -402,6 +464,8 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
 
   if do_abort:
     raise RuntimeError, 'Exiting since jobs are missing layers. Set AllowMissingLayers=1\nto override.'
+
+
 
 if __name__=="__main__":
   CP = parseConfigFile(sys.argv[1])
