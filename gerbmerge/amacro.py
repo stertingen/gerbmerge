@@ -20,7 +20,8 @@ import copy
 
 import config
 
-_macro_pat = re.compile(r'^%AM([^*]+)\*$')
+#_macro_pat = re.compile(r'^%AM([^*]+)\*$')
+_macro_pat = re.compile(r'^%AM([^*]+)\*(?:(?:(0[^*]+)\*)?([^*]+)\*%)?$')
 
 # This list stores the expected types of parameters for each primitive type
 # (e.g., outline, line, circle, polygon, etc.). None is used for undefined
@@ -124,8 +125,9 @@ class ApertureMacroPrimitive:
       except:
         raise RuntimeError, 'Outline macro primitive has non-integer number of points'
 
-      if len(fields) != (3+2*N):
-        raise RuntimeError, 'Outline macro primitive has %d fields...expecting %d fields' % (len(fields), 3+2*N)
+      if len(fields) != (4+2*N+1) and len(fields) != (3+2*N): # Keeping old check value for compatibility?
+        # N*2 + 4 (exposure, N, last point) + 1 (rotation) -> From Gerber specifications 2017.03
+        raise RuntimeError, 'Outline macro primitive has %d fields...expecting %d fields (or %d)' % (len(fields), 4+2*N+1, (3+2*N))
     else:
       if len(fields) != len(valids):
         raise RuntimeError, 'Macro primitive has %d fields...expecting %d fields' % (len(fields), len(valids))
@@ -260,16 +262,23 @@ def parseApertureMacro(s, fid):
 
     M = ApertureMacro(name)
 
-    for line in fid:
-      if line[0]=='%':
-        return M
-
+    if match.group(3) is not None:
       P = ApertureMacroPrimitive()
-      P.setFromLine(line)
+      P.setFromLine(match.group(3))
 
       M.add(P)
-    else:
-      raise RuntimeError, "Premature end-of-file while parsing aperture macro"
+      return M
+    else :
+      for line in fid:
+        if line[0]=='%':
+          return M
+
+        P = ApertureMacroPrimitive()
+        P.setFromLine(line)
+
+        M.add(P)
+      else:
+        raise RuntimeError, "Premature end-of-file while parsing aperture macro"
   else:
     return None
 
