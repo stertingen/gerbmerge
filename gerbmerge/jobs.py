@@ -96,7 +96,7 @@ xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter 
                                                                 # feed/speed (for Protel)
 xtdef2_pat = re.compile(r'^(T\d+)C([0-9.]+)(?:F\d+)?(?:S\d+)?$') # Tool+diameter definition with optional
                                                                 # feed/speed at the end (for OrCAD)
-xzsup_pat = re.compile(r'^INCH(,([LT])Z)?$')      # Leading/trailing zeros INCLUDED
+xzsup_pat = re.compile(r'^(?:INCH|METRIC)(,([LT])Z)?$')      # Leading/trailing zeros INCLUDED
 
 XIgnoreList = ( \
   re.compile(r'^%$'),
@@ -672,9 +672,6 @@ class Job:
       if line[:6]=='METRIC':
         if (config.Config['measurementunits'] == 'inch'):
           raise RuntimeError, "File %s units do match config file" % fullname
-        else:
-        #print "ignoring METRIC directive: " + line
-          continue # ignore it so func doesn't choke on it
 
       if line[:3] == 'T00': # a tidying up that we can ignore
         continue
