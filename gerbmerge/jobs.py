@@ -105,6 +105,7 @@ XIgnoreList = ( \
   re.compile(r'^M72$'),   # Inches
   re.compile(r'^FMAT,2$'),# KiCad work-around
   re.compile(r'^G05$'),   # Drill Mode
+  re.compile(r'^M71$'),   # Metric Mode
   re.compile(r'^G90$')    # Absolute Mode
   )
 
