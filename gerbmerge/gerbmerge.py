@@ -367,15 +367,6 @@ def merge(opts, args, gui = None):
   updateGUI("Reading job files...")
   config.parseConfigFile(args[0])
 
-  # Force all X and Y coordinates positive by adding absolute value of minimum X and Y
-  for name, job in config.Jobs.iteritems():
-    min_x, min_y = job.mincoordinates()
-    shift_x = shift_y = 0
-    if min_x < 0: shift_x = abs(min_x)
-    if min_y < 0: shift_y = abs(min_y)
-    if (shift_x > 0) or (shift_y > 0):
-      job.fixcoordinates( shift_x, shift_y )
-
   # Display job properties                                                                
   for job in config.Jobs.values():
     print 'Job %s:' % job.name,
