@@ -757,15 +757,15 @@ class Job:
         if match:
           x, y = xln2tenthou2(match.groups())
         else:
-        match = xdraw_pat.match(line)
-        if match:
-          x = xln2tenthou(match.groups())[0]
-          y = last_y
-        else:
-          match = ydraw_pat.match(line)
+          match = xdraw_pat.match(line)
           if match:
-            y = xln2tenthou(match.groups())[0]
-            x = last_x
+            x = xln2tenthou(match.groups())[0]
+            y = last_y
+          else:
+            match = ydraw_pat.match(line)
+            if match:
+              y = xln2tenthou(match.groups())[0]
+              x = last_x
           
       if match:
         if currtool is None:
