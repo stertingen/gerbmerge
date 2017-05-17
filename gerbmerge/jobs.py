@@ -88,8 +88,8 @@ IgnoreList = ( \
 
 # Patterns for Excellon interpretation
 xtool_pat = re.compile(r'^(T\d+)$')           # Tool selection
-xydraw_pat = re.compile(r'^X([+-]?\d+)Y([+-]?\d+)$')    # Plunge command
-xydraw_pat2 = re.compile(r'^X([+-]?\d+\.\d*)Y([+-]?\d+\.\d*)$')    # Plunge command
+xydraw_pat = re.compile(r'^X([+-]?\d+)Y([+-]?\d+)(?:G85X([+-]?\d+)Y([+-]?\d+))?$')    # Plunge command with optional G85
+xydraw_pat2 = re.compile(r'^X([+-]?\d+\.\d*)Y([+-]?\d+\.\d*)(?:G85X([+-]?\d+\.\d*)Y([+-]?\d+\.\d*))?$')    # Plunge command with optional G85
 xdraw_pat = re.compile(r'^X([+-]?\d+)$')    # Plunge command, repeat last Y value
 ydraw_pat = re.compile(r'^Y([+-]?\d+)$')    # Plunge command, repeat last X value
 xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter definition with optional
@@ -174,8 +174,9 @@ class Job:
     # This is to help sorting all jobs and writing out all plunge
     # commands for a single tool.
     # 
-    # The key to this dictionary is the full tool name, e.g., T03
-    # as a string. Each command is an (X,Y) integer tuple.
+    # The key to this dictionary is the full tool name, e.g., T03 as a
+    # string. Each command is an (X,Y,STOP_X,STOP_Y) integer tuple.
+    # STOP_X and STOP_Y are not none only if this is a G85 command.
     self.xcommands = {}
 
     # This is a dictionary mapping LOCAL tool names (e.g., T03) to diameters
@@ -265,6 +266,11 @@ class Job:
         and ( type( command_list[1] ) == types.IntType ):  ## ensure that first two elemenst are integers
           command_list[0] += x_shift / 10
           command_list[1] += y_shift / 10
+          if ( type( command_list[2] ) == types.IntType ) \
+          and ( type( command_list[3] ) == types.IntType ):  ## ensure that first two elemenst are integerslen(command_list) == 4:
+            # G85 command, need to shift the second pair of xy, too.
+            command_list[2] += x_shift / 10
+            command_list[3] += y_shift / 10
         command[index] = tuple(command_list)                ## convert list back to tuple
         
       self.xcommands[tool] = command                        ## set modified command
@@ -652,16 +658,22 @@ class Job:
     def xln2tenthou(L, divisor=divisor, zeropadto=zeropadto):
       V = []
       for s in L:
-        if not suppress_leading:
-          s = s + '0'*(zeropadto-len(s))
-        V.append(int(round(int(s)*divisor)))
+        if s is not None:
+          if not suppress_leading:
+            s = s + '0'*(zeropadto-len(s))
+          V.append(int(round(int(s)*divisor)))
+        else:
+          V.append(None)
       return tuple(V)
 
     # Helper function to convert X/Y strings into integers in units of ten-thousandth of an inch.
     def xln2tenthou2 (L, divisor=divisor, zeropadto=zeropadto):
       V = []
       for s in L:
-        V.append(int(float(s)*1000*divisor))
+        if s is not None:
+          V.append(int(float(s)*1000*divisor))
+        else:
+          V.append(None)
       return tuple(V)
 
     for line in fid.xreadlines():
@@ -748,11 +760,11 @@ class Job:
       # Plunge command?
       match = xydraw_pat.match(line)
       if match:
-        x, y = xln2tenthou(match.groups())
+        x, y, stop_x, stop_y = xln2tenthou(match.groups())
       else:
         match = xydraw_pat2.match(line)
         if match:
-          x, y = xln2tenthou2(match.groups())
+          x, y, stop_x, stop_y = xln2tenthou2(match.groups())
         else:
           match = xdraw_pat.match(line)
           if match:
@@ -769,9 +781,9 @@ class Job:
           raise RuntimeError, 'File %s has plunge command without previous tool selection' % fullname
 
         try:
-          self.xcommands[currtool].append((x,y))
+          self.xcommands[currtool].append((x,y,stop_x,stop_y))
         except KeyError:
-          self.xcommands[currtool] = [(x,y)]
+          self.xcommands[currtool] = [(x,y,stop_x,stop_y)]
 
         last_x = x
         last_y = y
@@ -885,10 +897,17 @@ class Job:
     for ltool in ltools:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
-          x, y = cmd
+          x, y, stop_x, stop_y = cmd
           new_x = x+DX
           new_y = y+DY
-          fid.write('X%sY%s\n' % (formatForXln(new_x), formatForXln(new_y)))
+          if stop_x is None:
+            fid.write('X%sY%s\n' % (formatForXln(new_x), formatForXln(new_y)))
+          else:
+            new_stop_x = stop_x+DX
+            new_stop_y = stop_y+DY
+            fid.write('X%sY%sG85X%sY%s\n' %
+                      (formatForXln(new_x), formatForXln(new_y),
+                       formatForXln(new_stop_x), formatForXln(new_stop_y)))
 
   def writeDrillHits(self, fid, diameter, toolNum, Xoff, Yoff):
     """Write a drill hit pattern. diameter is tool diameter in inches, while toolNum is
@@ -916,10 +935,12 @@ class Job:
     for ltool in ltools:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
-          x, y = cmd
+          x, y, stop_x, stop_y = cmd
           # add metric support (1/1000 mm vs. 1/100,000 inch)
 # TODO - verify metric scaling is correct???
           makestroke.drawDrillHit(fid, 10*x+DX, 10*y+DY, toolNum)
+          if stop_x is not None:
+            makestroke.drawDrillHit(fid, 10*stop_x+DX, 10*stop_y+DY, toolNum)
 
   def aperturesAndMacros(self, layername):
     "Return dictionaries whose keys are all necessary aperture names and macro names for this layer"
@@ -1135,8 +1156,9 @@ class Job:
     keys = self.xcommands.keys()
     for toolname in keys:
       # Remember Excellon is 2.4 format while Gerber data is 2.5 format
-      validList = [(x,y) for x,y in self.xcommands[toolname] if self.inBorders(10*x,10*y)]
-
+      validList = [tup for tup in self.xcommands[toolname]
+                   if (self.inBorders(10*tup[0],10*tup[1]) and
+                       (tup[2] is None or self.inBorders(10*tup[2],10*tup[3])))]
       if validList:
         self.xcommands[toolname] = validList
       else:
@@ -1421,7 +1443,7 @@ def rotateJob(job, degrees = 90, firstpass = True):
   for tool in job.xcommands.keys():
     J.xcommands[tool] = []
 
-    for x,y in job.xcommands[tool]:
+    for x,y,stop_x,stop_y in job.xcommands[tool]:
 # add metric support (1/1000 mm vs. 1/100,000 inch)
 # NOTE: There don't appear to be any need for a change. The usual x10 factor seems to apply
 
@@ -1431,8 +1453,16 @@ def rotateJob(job, degrees = 90, firstpass = True):
       newx = int(round(newx/10.0))
       newy = int(round(newy/10.0))
 
+      if stop_x is not None:
+        newstop_x = -(10*stop_y - job.miny) + job.minx + offset
+        newstop_y =  (10*stop_x - job.minx) + job.miny
 
-      J.xcommands[tool].append((newx,newy))
+        newstop_x = int(round(newstop_x/10.0))
+        newstop_y = int(round(newstop_y/10.0))
+      else:
+        newstop_x = None
+        newstop_y = None
+      J.xcommands[tool].append((newx,newy,newstop_x,newstop_y))
 
   # Rotate some more if required
   degrees -= 90
