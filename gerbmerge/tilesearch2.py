@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """Tile search using random placement and evaluation. Works surprisingly well.
 --------------------------------------------------------------------
 

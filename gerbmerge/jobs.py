@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 This module reads all Gerber and Excellon files and stores the
 data for each job.

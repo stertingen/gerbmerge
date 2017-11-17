@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import sys
 import glob
 import os
@@ -60,7 +60,7 @@ else:
   fid = file('misc/gerbmerge', 'wt')
   fid.write( \
   r"""#!/bin/sh
-python %s/gerbmerge/gerbmerge.py $*
+python2 %s/gerbmerge/gerbmerge.py $*
   """ % DestLib)
   fid.close()
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """This file handles the writing of the fabrication drawing Gerber file
 
 --------------------------------------------------------------------

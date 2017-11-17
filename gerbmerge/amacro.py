@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Define and manage aperture macros (%AM command). Currently,
 only macros without replaceable parameters (e.g., $1, $2, etc.)

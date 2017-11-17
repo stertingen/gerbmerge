@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """Search for an optimum tiling using brute force exhaustive search
 --------------------------------------------------------------------
 

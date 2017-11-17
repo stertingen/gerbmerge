@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """A placement is a final arrangement of jobs at given (X,Y) positions.
 This class is intended to "un-pack" an arragement of jobs constructed
 manually through Layout/Panel/JobLayout/etc. (i.e., a layout.def file)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """A tiling is an arrangement of jobs, where each job may
 be a copy of another and may be rotated. A tiling consists
 of two things:
