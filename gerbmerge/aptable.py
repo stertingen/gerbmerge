@@ -43,10 +43,11 @@ for ap in Apertures:
   globals()[ap[0]] = ap
 
 class Aperture:
-  def __init__(self, aptype, code, dimx, dimy=None):
+  def __init__(self, aptype, code, units, dimx, dimy=None):
     assert aptype in Apertures
     self.apname, self.pat, self.format = aptype
     self.code = code
+    self.units = units
     self.dimx = dimx      # Macro name for Macro apertures
     self.dimy = dimy      # None for Macro apertures
 
@@ -59,8 +60,8 @@ class Aperture:
   def rectangleAsRect(self, X, Y):
     """Return a 4-tuple (minx,miny,maxx,maxy) describing the area covered by
     this Rectangle aperture when flashed at center co-ordinates (X,Y)"""
-    dx = util.in2gerb(self.dimx)
-    dy = util.in2gerb(self.dimy)
+    dx = util.in2gerb(self.dimx, self.units)
+    dy = util.in2gerb(self.dimy, self.units)
 
     if dx & 1:    # Odd-sized: X extents are (dx+1)/2 on the left and (dx-1)/2 on the right
       xm = (dx+1)/2
@@ -93,7 +94,7 @@ class Aperture:
     if (dimx != None) or (dimy != None):
       if dimx==None: dimx=self.dimx
       if dimy==None: dimy=self.dimy
-      return Aperture( (self.apname, self.pat, self.format), self.code, dimx, dimy )
+      return Aperture( (self.apname, self.pat, self.format), self.code, self.units, dimx, dimy )
     else:
       return False ## no new aperture needs to be created
 
@@ -119,7 +120,7 @@ class Aperture:
 
   def rotated(self, RevGAMT):
     # deepcopy doesn't work on re patterns for some reason so we copy ourselves manually
-    APR = Aperture((self.apname, self.pat, self.format), self.code, self.dimx, self.dimy)
+    APR = Aperture((self.apname, self.pat, self.format), self.code, self.units, self.dimx, self.dimy)
     APR.rotate(RevGAMT)
     return APR
 
@@ -156,7 +157,7 @@ class Aperture:
 # that translates macro names local to this file to global names in the GAMT. We make
 # the translation right away so that the return value from this function is an aperture
 # definition with a global macro name, e.g., 'ADD10M5'
-def parseAperture(s, knownMacroNames):
+def parseAperture(s, knownMacroNames, units):
   for ap in Apertures:
     match = ap[1].match(s)
     if match:
@@ -179,7 +180,7 @@ def parseAperture(s, knownMacroNames):
         except:
           raise RuntimeError, "Illegal floating point aperture size"
 
-      return Aperture(ap, code, dimx, dimy)
+      return Aperture(ap, code, units, dimx, dimy)
 
   return None
 
@@ -214,9 +215,10 @@ def constructApertureTable(fileList):
 
   AT = {}               # Aperture Table for this file
   for fname in fileList:
-    #print 'Reading apertures from %s ...' % fname
+    print 'Reading apertures from %s ...' % fname
 
     knownMacroNames = {}
+    units = ''
 
     fid = file(fname,'rt')
     for line in fid:
@@ -230,6 +232,16 @@ def constructApertureTable(fileList):
       # representation to the dictionary. It might already exist.
       # Ignore %AMOC8* from Eagle for now as it uses a macro parameter.
       if line[:7]=='%AMOC8*':
+        continue
+
+      if line[:7]=='%MOIN*%':
+        print "Got an imperial file!"
+        units = 'inch'
+        continue
+      
+      if line[:7]=='%MOMM*%':
+        print "Got a metric file!"
+        units = 'mm'
         continue
 
       # parseApertureMacro() sucks up all macro lines up to terminating '%'
@@ -250,7 +262,7 @@ def constructApertureTable(fileList):
           knownMacroNames[localMacroName] = AM.name
           RevGAMT[AM.hash()] = AM.name
       else:
-        A = parseAperture(line, knownMacroNames)
+        A = parseAperture(line, knownMacroNames, units)
 
         # If this is an aperture definition, add the string representation
         # to the dictionary. It might already exist.

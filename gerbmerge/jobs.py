@@ -55,6 +55,7 @@ drawX_pat  = re.compile(r'X([+-]?\d+)D0?([123])\*')        # Drawing command, Y 
 drawY_pat  = re.compile(r'Y([+-]?\d+)D0?([123])\*')        # Drawing command, X is implied
 format_pat = re.compile(r'%FS(L|T)?(A|I)(N\d+)?(X\d\d)(Y\d\d)\*%')  # Format statement
 layerpol_pat = re.compile(r'^%LP[CD]\*%')             # Layer polarity (D=dark, C=clear)
+measunit_pat = re.compile(r'^%MO(IN|MM)\*%')
 
 # Circular interpolation drawing commands (from Protel)
 cdrawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')
@@ -80,7 +81,6 @@ IgnoreList = ( \
   re.compile(r'\*'),            # Empty statement
   re.compile(r'^%IN.*\*%'),
   re.compile(r'^%ICAS\*%'),      # Not in RS274X spec.
-  re.compile(r'^%MOIN\*%'),
   re.compile(r'^%ASAXBY\*%'),
   re.compile(r'^%AD\*%'),        # GerbTool empty aperture definition
   re.compile(r'^%LN.*\*%')       # Layer name
@@ -285,7 +285,7 @@ class Job:
     RevGAT = config.buildRevDict(GAT)     # RevGAT[hash] = aperturename
     RevGAMT = config.buildRevDict(GAMT)   # RevGAMT[hash] = aperturemacroname
 
-    #print 'Reading data from %s ...' % fullname
+    print 'Reading data from %s ...' % fullname
 
     fid = file(fullname, 'rt')
     currtool = None
@@ -331,9 +331,34 @@ class Job:
     # to manually insert the point X000000Y00000 into the command stream.
     firstFlash = True
 
+    # Unit system for this file, either mm or inch
+    units = ''
+
     for line in fid:
       # Get rid of CR characters (0x0D) and leading/trailing blanks
       line = string.replace(line, '\x0D', '').strip()
+      
+      # Check if file is in imperial units
+      match = measunit_pat.match(line)
+      if match:
+        if currtool:
+          raise RuntimeError, "File %s has a measurement unit definition that comes after drawing commands." % fullname
+
+        if match.group(1) == 'MM':
+          units = 'mm'
+          unitfactor = 1/25.4
+        else:
+          units = 'inch'
+          unitfactor = 25.4
+        
+        # x_div and y_div have been set earlier, but with the wrong units,
+        # so correct them here
+        if config.Config['measurementunits'] != units:
+          x_div = x_div * unitfactor
+          y_div = y_div * unitfactor
+
+        continue
+      
 
       # Old location of format_pat search. Now moved down into the sub-line parse loop below.
 
@@ -344,14 +369,14 @@ class Job:
       if match:
         self.commands[layername].append(line)
         continue
-        
+
       # See if this is an aperture definition, and if so, map it.
       match = apdef_pat.match(line)
       if match:
         if currtool:
           raise RuntimeError, "File %s has an aperture definition that comes after drawing commands." % fullname
 
-        A = aptable.parseAperture(line, self.apmxlat[layername])
+        A = aptable.parseAperture(line, self.apmxlat[layername], units)
         if not A:
           raise RuntimeError, "Unknown aperture definition in file %s" % fullname
 
@@ -373,18 +398,9 @@ class Job:
         continue
 
 # DipTrace specific fixes, but could be emitted by any CAD program. They are Standard Gerber RS-274X
-      # a hack to fix lack of recognition for metric direction from DipTrace - %MOMM*%
-      if (line[:7] == '%MOMM*%'):
-        if (config.Config['measurementunits'] == 'inch'):
-          raise RuntimeError, "File %s units do match config file" % fullname
-        else:
-        #print "ignoring metric directive: " + line
-          continue # ignore it so func doesn't choke on it
-
       if line[:3] == '%SF': # scale factor - we will ignore it
         print 'Scale factor parameter ignored: ' + line
         continue
-      
 # end basic diptrace fixes
 
       # See if this is an aperture macro definition, and if so, map it.
@@ -432,23 +448,33 @@ class Job:
             if item[0]=='N':      # Maximum digits for N* commands...ignore it
               continue
 
-            # allow for metric - scale to 1/1000 mm
+            # Conversion factor between desired and actual unit system
+            unitfactor = 1
+            if config.Config['measurementunits'] != units:
+              if units == "mm":
+                # We have mm, but we want inch
+                unitfactor = 1/25.4
+              elif units == "inch":
+                # We have inch, but we want mm
+                unitfactor = 25.4
+              # In some gbr files, our unit system in unknown at this point. We will correct x_div and y_div later.
+
             if config.Config['measurementunits'] == 'inch':
+              # Scale to 1/100000 inch
               if item[0]=='X':      # M.N specification for X-axis.
                 fracpart = int(item[2])
-                x_div = 10.0**(5-fracpart)
+                x_div = unitfactor * 10.0**(5-fracpart)
               if item[0]=='Y':      # M.N specification for Y-axis.
                 fracpart = int(item[2])
-                y_div = 10.0**(5-fracpart)
+                y_div = unitfactor * 10.0**(5-fracpart)
             else:
+              # Scale to 1/1000 mm
               if item[0]=='X':      # M.N specification for X-axis.
                 fracpart = int(item[2])
-                x_div = 10.0**(3-fracpart)
-                #print "x_div= %5.3f." % x_div
+                x_div = unitfactor * 10.0**(3-fracpart)
               if item[0]=='Y':      # M.N specification for Y-axis.
                 fracpart = int(item[2])
-                y_div = 10.0**(3-fracpart)
-                #print "y_div= %5.3f." % y_div
+                y_div = unitfactor * 10.0**(3-fracpart)
       
           continue
 
@@ -459,9 +485,16 @@ class Job:
           gcode = int(match.group(1))
 
           # Determine if this is a G-Code that should be ignored because it has no effect
-          # (e.g., G70 specifies "inches" which is already in effect).
-          # added 71 - specify mm (metric)
-          if gcode in [54, 70, 90, 71]:
+          if gcode in [54, 90]:
+            continue
+
+          # Check if gcode matches unit
+          if gcode==70 and units!="inch":
+            raise RuntimeError, "GCode 70 (inch) does not correspond to %MOMM*% (mm)!"
+            continue
+          
+          if gcode==71 and units!="mm":
+            raise RuntimeError, "GCode 71 (mm) does not correspond to %MOIN*% (inch)!"
             continue
 
           # Determine if this is a G-Code that we have to emit because it matters.
@@ -631,11 +664,14 @@ class Job:
       print self.commands[layername]
 
   def parseExcellon(self, fullname):
-    #print 'Reading data from %s ...' % fullname
+    print 'Reading data from %s ...' % fullname
 
     fid = file(fullname, 'rt')
     currtool = None
     suppress_leading = True     # Suppress leading zeros by default, equivalent to 'INCH,TZ'
+
+    # Unit system: either mm or inch
+    units = config.Config['measurementunits']
 
     # We store Excellon X/Y data in ten-thousandths of an inch. If the Config
     # option ExcellonDecimals is not 4, we must adjust the values read from the
@@ -680,11 +716,25 @@ class Job:
       # Get rid of CR characters
       line = string.replace(line, '\x0D', '')
 
-# add support for DipTrace
       if line[:6]=='METRIC':
-        if (config.Config['measurementunits'] == 'inch'):
-          raise RuntimeError, "File %s units do match config file" % fullname
+        units = 'mm'
+        if config.Config['measurementunits'] == 'inch':
+          if self.ExcellonDecimals > 0:
+            divisor = 1/25.4 * 10.0**(4 - self.ExcellonDecimals)
+          else:
+            divisor = 1/25.4 * 10.0**(4 - config.Config['excellondecimals'])
+        continue
+      
+      if line[:4]=='INCH':
+        units = 'inch'
+        if config.Config['measurementunits'] == 'mm':
+          if self.ExcellonDecimals > 0:
+            divisor = 25.4 * 10.0**(4 - self.ExcellonDecimals)
+          else:
+            divisor = 25.4 * 10.0**(4 - config.Config['excellondecimals'])
+        continue
 
+# add support for DipTrace
       if line[:3] == 'T00': # a tidying up that we can ignore
         continue
 # end metric/diptrace support

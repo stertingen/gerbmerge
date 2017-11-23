@@ -13,19 +13,25 @@ http://ruggedcircuits.com/gerbmerge
 
 import config
 
+def in2gerb(value, val_unit = ''):
+    """Convert something in val_unit to 2.5(in) or 5.3(mm) Gerber units"""
+    f = 1
+    if config.Config['measurementunits'] != val_unit:
+      if val_unit == 'inch':
+        # Target: mm, value: inch
+        f = 25.4
+      elif val_unit == 'mm':
+        # Target: inch, value: mm
+        f = 1/25.4
 
-def in2gerb(value):
-# add metric support (1/1000 mm vs. 1/100,000 inch)
     if config.Config['measurementunits'] == 'inch':
-      """Convert inches to 2.5 Gerber units"""
-      return int(round(value*1e5))
+      return int(round(f*value*1e5))
     else: #convert mm to 5.3 Gerber units
-      return int(round(value*1e3))
+      return int(round(f*value*1e3))
 
 def gerb2in(value):
-# add metric support (1/1000 mm vs. 1/100,000 inch)
+    """Convert 2.5(in) or 5.3(mm) Gerber units to target unit specified in config"""
     if config.Config['measurementunits'] == 'inch':
-      """Convert 2.5 Gerber units to inches"""
       return float(value)*1e-5
-    else: #convert 5.3 Gerber units to mm
+    else:
       return float(value)*1e-3
