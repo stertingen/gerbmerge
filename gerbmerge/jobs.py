@@ -96,16 +96,15 @@ xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter 
                                                                 # feed/speed (for Protel)
 xtdef2_pat = re.compile(r'^(T\d+)C([0-9.]+)(?:F\d+)?(?:S\d+)?$') # Tool+diameter definition with optional
                                                                 # feed/speed at the end (for OrCAD)
-xzsup_pat = re.compile(r'^(?:INCH|METRIC)(,([LT])Z)?$')      # Leading/trailing zeros INCLUDED
+xzsup_pat = re.compile(r'^(INCH|METRIC)(,([LT])Z)?$')           # Leading/trailing zeros INCLUDED
+xmunit_pat = re.compile(r'^M7([12])$')                          # M71 (mm) / GM2 (inch) unit mode
 
 XIgnoreList = ( \
   re.compile(r'^%$'),
   re.compile(r'^M30$'),   # End of job
   re.compile(r'^M48$'),   # Program header to first %
-  re.compile(r'^M72$'),   # Inches
   re.compile(r'^FMAT,2$'),# KiCad work-around
   re.compile(r'^G05$'),   # Drill Mode
-  re.compile(r'^M71$'),   # Metric Mode
   re.compile(r'^G90$')    # Absolute Mode
   )
 
@@ -680,11 +679,13 @@ class Job:
     # trailing-zero-pad all input integers to M+N digits (e.g., 6 digits for 2.4 mode)
     # specified by the 'zeropadto' variable.
     if self.ExcellonDecimals > 0:
-      divisor = 10.0**(4 - self.ExcellonDecimals)
+      decimal_divisor = 10.0**(4 - self.ExcellonDecimals)
       zeropadto = 2+self.ExcellonDecimals
     else:
-      divisor = 10.0**(4 - config.Config['excellondecimals'])
+      decimal_divisor = 10.0**(4 - config.Config['excellondecimals'])
       zeropadto = 2+config.Config['excellondecimals']
+
+    divisor = decimal_divisor
     
     # Protel takes advantage of optional X/Y components when the previous one is the same,
     # so we have to remember them.
@@ -716,24 +717,6 @@ class Job:
       # Get rid of CR characters
       line = string.replace(line, '\x0D', '')
 
-      if line[:6]=='METRIC':
-        units = 'mm'
-        if config.Config['measurementunits'] == 'inch':
-          if self.ExcellonDecimals > 0:
-            divisor = 1/25.4 * 10.0**(4 - self.ExcellonDecimals)
-          else:
-            divisor = 1/25.4 * 10.0**(4 - config.Config['excellondecimals'])
-        continue
-      
-      if line[:4]=='INCH':
-        units = 'inch'
-        if config.Config['measurementunits'] == 'mm':
-          if self.ExcellonDecimals > 0:
-            divisor = 25.4 * 10.0**(4 - self.ExcellonDecimals)
-          else:
-            divisor = 25.4 * 10.0**(4 - config.Config['excellondecimals'])
-        continue
-
 # add support for DipTrace
       if line[:3] == 'T00': # a tidying up that we can ignore
         continue
@@ -746,7 +729,18 @@ class Job:
       # Check for leading/trailing zeros included ("INCH,LZ" or "INCH,TZ")
       match = xzsup_pat.match(line)
       if match:
-        if match.group(1)=='L':
+        if match.group(1)=='METRIC':
+          print "Got METRIC keyword!"
+          units = 'mm'
+          if config.Config['measurementunits'] == 'inch':
+            divisor = 1/25.4 * decimal_divisor
+        elif match.group(1)=='INCH':
+          print "Got INCH keyword!"
+          units = 'inch'
+          if config.Config['measurementunits'] == 'mm':
+            divisor = 25.4 * decimal_divisor
+
+        if match.group(2)=='L':
           # LZ --> Leading zeros INCLUDED
           suppress_leading = False
         else:
@@ -773,6 +767,21 @@ class Job:
           raise RuntimeError, "File %s defines tool %s more than once" % (fullname, currtool)
         self.xdiam[currtool] = diam
         continue
+
+      match = xmunit_pat.match(line)
+      if match:
+        if match.group(1) == '1':
+          print "Got M71 (mm)"
+          if config.Config['measurementunits'] == 'inch':
+            # mm to inch
+            divisor = 1/25.4 * decimal_divisor
+          continue
+        elif match.group(1) == '2':
+          print "Got M72 (inch)"
+          if config.Config['measurementunits'] == 'mm':
+            # inch to mm
+            divsior = 25.4 * decimal_divisor
+          continue
 
       # Didn't match TxxxCyyy. It could be a tool change command 'Tdd'.
       match = xtool_pat.match(line)
