@@ -33,17 +33,14 @@ def writeDrillHits(fid, Place, Tools):
       job.writeDrillHits(fid, size, toolNumber)
 
 def writeBoundingBox(fid, OriginX, OriginY, MaxXExtent, MaxYExtent):
-  units = config.Config['measurementunits']
-  x = util.in2gerb(OriginX, units)
-  y = util.in2gerb(OriginY, units)
-  X = util.in2gerb(MaxXExtent, units)
-  Y = util.in2gerb(MaxYExtent, units)
+  x = util.in2gerb(OriginX)
+  y = util.in2gerb(OriginY)
+  X = util.in2gerb(MaxXExtent)
+  Y = util.in2gerb(MaxYExtent)
 
   makestroke.drawPolyline(fid, [(x,y), (X,y), (X,Y), (x,Y), (x,y)], 0, 0)
 
 def writeDrillLegend(fid, Tools, OriginY, MaxXExtent):
-  units = config.Config['measurementunits']
-
   # This is the spacing from the right edge of the board to where the
   # drill legend is to be drawn, in inches. Remember we have to allow
   # for dimension arrows, too.
@@ -74,8 +71,8 @@ def writeDrillLegend(fid, Tools, OriginY, MaxXExtent):
 
   # For each tool, draw a drill hit marker then the size of the tool
   # in inches.
-  posY = util.in2gerb(OriginY, units)
-  posX = util.in2gerb(MaxXExtent, units) + dimspace
+  posY = util.in2gerb(OriginY)
+  posX = util.in2gerb(MaxXExtent) + dimspace
   maxX = 0
   for size,toolNum in L:
     # Determine string to write and midpoint of string
@@ -92,21 +89,20 @@ def writeDrillLegend(fid, Tools, OriginY, MaxXExtent):
     posY += int(round((ur[1]-ll[1])*1.5))
 
   # Return value is lower-left of user text area, without any padding.
-  return maxX, util.in2gerb(OriginY, units)
+  return maxX, util.in2gerb(OriginY)
 
 def writeDimensionArrow(fid, OriginX, OriginY, MaxXExtent, MaxYExtent):
-  units = config.Config['measurementunits']
-  x = util.in2gerb(OriginX, units)
-  y = util.in2gerb(OriginY, units)
-  X = util.in2gerb(MaxXExtent, units)
-  Y = util.in2gerb(MaxYExtent, units)
+  x = util.in2gerb(OriginX)
+  y = util.in2gerb(OriginY)
+  X = util.in2gerb(MaxXExtent)
+  Y = util.in2gerb(MaxYExtent)
 
   # This constant is how far away from the board the centerline of the dimension
   # arrows should be, in inches.
   dimspace = 0.2
 
   # Convert it to Gerber (0.00001" or 2.5) units
-  dimspace = util.in2gerb(dimspace, units)
+  dimspace = util.in2gerb(dimspace)
 
   # Draw an arrow above the board, on the left side and right side
   makestroke.drawDimensionArrow(fid, x, Y+dimspace, makestroke.FacingLeft)
@@ -157,7 +153,6 @@ def writeDimensionArrow(fid, OriginX, OriginY, MaxXExtent, MaxYExtent):
   makestroke.drawLine(fid, posX, posY2, posX, y)
 
 def writeUserText(fid, X, Y):
-  units = config.Config['measurementunits']
   fname = config.Config['fabricationdrawingtext']
   if not fname: return
 
@@ -171,7 +166,7 @@ def writeUserText(fid, X, Y):
   lines.reverse()  # We're going to print from bottom up
 
   # Offset X position to give some clearance from drill legend
-  X += util.in2gerb(0.2, units) # 2000
+  X += util.in2gerb(0.2) # 2000
 
   for line in lines:
     # Get rid of CR
