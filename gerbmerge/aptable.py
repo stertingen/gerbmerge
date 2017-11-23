@@ -156,7 +156,7 @@ class Aperture:
 # that translates macro names local to this file to global names in the GAMT. We make
 # the translation right away so that the return value from this function is an aperture
 # definition with a global macro name, e.g., 'ADD10M5'
-def parseAperture(s, knownMacroNames):
+def parseAperture(s, knownMacroNames, units):
   for ap in Apertures:
     match = ap[1].match(s)
     if match:
@@ -173,9 +173,18 @@ def parseAperture(s, knownMacroNames):
           raise RuntimeError, 'Aperture Macro name "%s" not defined' % dimx
       else:
         try:
-          dimx = float(dimx)
+          unitfactor = 1
+          if config.Config['measurementunits'] != units:
+            if units == 'inch': # inch to mm
+              unitfactor = 25.4
+            elif units == 'mm': # mm to inch
+              unitfactor = 1/25.4
+            else:
+              raise RuntimeError, "Undefined unit system"
+
+          dimx = unitfactor * float(dimx)
           if dimy:
-            dimy = float(dimy)
+            dimy = unitfactor * float(dimy)
         except:
           raise RuntimeError, "Illegal floating point aperture size"
 
@@ -217,6 +226,8 @@ def constructApertureTable(fileList):
     #print 'Reading apertures from %s ...' % fname
 
     knownMacroNames = {}
+    
+    units = ''
 
     fid = file(fname,'rt')
     for line in fid:
@@ -230,6 +241,16 @@ def constructApertureTable(fileList):
       # representation to the dictionary. It might already exist.
       # Ignore %AMOC8* from Eagle for now as it uses a macro parameter.
       if line[:7]=='%AMOC8*':
+        continue
+
+      # Detect inch unit format
+      if line[:7]=='%MOIN*%':
+        units = 'inch'
+        continue
+      
+      # Detect mm unit format
+      if line[:7]=='%MOMM*%':
+        units = 'mm'
         continue
 
       # parseApertureMacro() sucks up all macro lines up to terminating '%'
@@ -250,7 +271,7 @@ def constructApertureTable(fileList):
           knownMacroNames[localMacroName] = AM.name
           RevGAMT[AM.hash()] = AM.name
       else:
-        A = parseAperture(line, knownMacroNames)
+        A = parseAperture(line, knownMacroNames, units)
 
         # If this is an aperture definition, add the string representation
         # to the dictionary. It might already exist.
