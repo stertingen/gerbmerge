@@ -98,6 +98,7 @@ xtdef2_pat = re.compile(r'^(T\d+)C([0-9.]+)(?:F\d+)?(?:S\d+)?$') # Tool+diameter
                                                                 # feed/speed at the end (for OrCAD)
 xzsup_pat = re.compile(r'^(INCH|METRIC)(,([LT])Z)?$')           # Leading/trailing zeros INCLUDED
 xmunit_pat = re.compile(r'^M7([12])$')                          # M71 (mm) / GM2 (inch) unit mode
+xkicadformat_pat = re.compile(r'^;FORMAT=\{(\d):(\d)/([A-Za-z ]+)/([A-Za-z ]+)/([A-Za-z ]+)\}')
 
 XIgnoreList = ( \
   re.compile(r'^%$'),
@@ -205,7 +206,6 @@ class Job:
     else:
       return float(self.maxx-self.minx)*0.001
 
-
   def height_in(self):
     # add metric support (1/1000 mm vs. 1/100,000 inch)
     if config.Config['measurementunits'] == 'inch':
@@ -222,7 +222,6 @@ class Job:
 
   def mincoordinates(self):
     "Return minimum X and Y coordinate"
-    
     return self.minx, self.miny
 
   def fixcoordinates(self, x_shift, y_shift):
@@ -665,12 +664,13 @@ class Job:
   def parseExcellon(self, fullname):
     print 'Reading data from %s ...' % fullname
 
+    # TODO:
+    # Parse LZ files (stripped trailing zeros)
+    # Parse x.x files (with decimal point)
+
     fid = file(fullname, 'rt')
     currtool = None
     suppress_leading = True     # Suppress leading zeros by default, equivalent to 'INCH,TZ'
-
-    # Unit system: either mm or inch
-    units = config.Config['measurementunits']
 
     # We store Excellon X/Y data in ten-thousandths of an inch. If the Config
     # option ExcellonDecimals is not 4, we must adjust the values read from the
@@ -685,14 +685,15 @@ class Job:
       decimal_divisor = 10.0**(4 - config.Config['excellondecimals'])
       zeropadto = 2+config.Config['excellondecimals']
 
-    divisor = decimal_divisor
+    unitfactor = 1 # Default, may change; divisor will also be updated then
+    divisor = decimal_divisor * unitfactor
     
     # Protel takes advantage of optional X/Y components when the previous one is the same,
     # so we have to remember them.
     last_x = last_y = 0
 
     # Helper function to convert X/Y strings into integers in units of ten-thousandth of an inch.
-    def xln2tenthou(L, divisor=divisor, zeropadto=zeropadto):
+    def xln2tenthou(L, divisor, zeropadto):
       V = []
       for s in L:
         if s is not None:
@@ -704,7 +705,7 @@ class Job:
       return tuple(V)
 
     # Helper function to convert X/Y strings into integers in units of ten-thousandth of an inch.
-    def xln2tenthou2 (L, divisor=divisor, zeropadto=zeropadto):
+    def xln2tenthou2 (L, divisor, zeropadto):
       V = []
       for s in L:
         if s is not None:
@@ -722,7 +723,23 @@ class Job:
         continue
 # end metric/diptrace support
 
+      # KiCAD is nice: It adds a comment to the header containing information for the decimal places
+      match = xkicadformat_pat.match(line)
+      if match:
+        new_pre = int(match.group(1))
+        new_decimals = int(match.group(2))
+        if self.ExcellonDecimals > 0:
+          if new_decimals != self.ExcellonDecimals:
+            raise RuntimeError, "File has %d Excellon decimals (according to header coment), but config said %d!" % (new_decimals, self.ExcellonDecimals)
+        else:
+          decimal_divisor = 10.0**(4 - new_decimals)
+          zeropadto = new_pre + new_decimals
+          divisor = decimal_divisor + unitfactor
+        print "KiCAD comment found! Format %d.%d" % (new_pre, new_decimals)
+        continue
+
       # Protel likes to embed comment lines beginning with ';'
+      # Important: after KiCAD match since there might be useful information!
       if line[0]==';':
         continue
 
@@ -731,14 +748,17 @@ class Job:
       if match:
         if match.group(1)=='METRIC':
           print "Got METRIC keyword!"
-          units = 'mm'
           if config.Config['measurementunits'] == 'inch':
-            divisor = 1/25.4 * decimal_divisor
+            unitfactor = 1/25.4
+          else:
+            unitfactor = 1
         elif match.group(1)=='INCH':
           print "Got INCH keyword!"
-          units = 'inch'
           if config.Config['measurementunits'] == 'mm':
-            divisor = 25.4 * decimal_divisor
+            unitfactor = 25.4
+          else:
+            unitfactor = 1
+        divisor = decimal_divisor * unitfactor
 
         if match.group(2)=='L':
           # LZ --> Leading zeros INCLUDED
@@ -755,7 +775,7 @@ class Job:
       if match:
         currtool, diam = match.groups()
         try:
-          diam = float(diam)
+          diam = unitfactor * float(diam)
         except:
           raise RuntimeError, "File %s has illegal tool diameter '%s'" % (fullname, diam)
 
@@ -766,22 +786,28 @@ class Job:
         if self.xdiam.has_key(currtool):
           raise RuntimeError, "File %s defines tool %s more than once" % (fullname, currtool)
         self.xdiam[currtool] = diam
+        #print "Tool %s has diam %f" % (currtool, diam)
         continue
 
+      # Parse M71 and M72 lines for unit conversion
       match = xmunit_pat.match(line)
       if match:
         if match.group(1) == '1':
           print "Got M71 (mm)"
           if config.Config['measurementunits'] == 'inch':
-            # mm to inch
-            divisor = 1/25.4 * decimal_divisor
+            unitfactor = 1/25.4 # mm to inch
+          else:
+            unitfactor = 1
           continue
         elif match.group(1) == '2':
           print "Got M72 (inch)"
+          units = 'inch'
           if config.Config['measurementunits'] == 'mm':
-            # inch to mm
-            divsior = 25.4 * decimal_divisor
+            unitfactor = 25.4 # inch to mm
+          else:
+            unitfactor = 1
           continue
+        divisor = decimal_divisor * unitfactor
 
       # Didn't match TxxxCyyy. It could be a tool change command 'Tdd'.
       match = xtool_pat.match(line)
@@ -819,20 +845,20 @@ class Job:
       # Plunge command?
       match = xydraw_pat.match(line)
       if match:
-        x, y, stop_x, stop_y = xln2tenthou(match.groups())
+        x, y, stop_x, stop_y = xln2tenthou(match.groups(), divisor, zeropadto)
       else:
         match = xydraw_pat2.match(line)
         if match:
-          x, y, stop_x, stop_y = xln2tenthou2(match.groups())
+          x, y, stop_x, stop_y = xln2tenthou2(match.groups(), divisor, zeropadto)
         else:
           match = xdraw_pat.match(line)
           if match:
-            x = xln2tenthou(match.groups())[0]
+            x = xln2tenthou(match.groups(), divisor, zeropadto)[0]
             y = last_y
           else:
             match = ydraw_pat.match(line)
             if match:
-              y = xln2tenthou(match.groups())[0]
+              y = xln2tenthou(match.groups(), divisor, zeropadto)[0]
               x = last_x
           
       if match:
@@ -1214,7 +1240,8 @@ class Job:
     "Remove plunge commands that are outside job dimensions"
     keys = self.xcommands.keys()
     for toolname in keys:
-      # Remember Excellon is 2.4 format while Gerber data is 2.5 format
+      # Remember Excellon is 2.4 format while Gerber data is 2.5 format - No!
+      # tup[0] = x, tup[1] = y, tup[2] = stop_x, tup[3] = stop_y
       validList = [tup for tup in self.xcommands[toolname]
                    if (self.inBorders(10*tup[0],10*tup[1]) and
                        (tup[2] is None or self.inBorders(10*tup[2],10*tup[3])))]
