@@ -14,6 +14,12 @@ if sys.version_info < (2,4,0):
   print '*'*73
   sys.exit(1)
 
+if sys.version_info >= (3,0,0):
+  print '*'*73
+  print 'GerbMerge version %d.%d does not support Python 3' % (VERSION_MAJOR, VERSION_MINOR)
+  print '*'*73
+  sys.exit(1)
+
 if 0:
   for key,val in distutils.sysconfig.get_config_vars().items():
     print key
