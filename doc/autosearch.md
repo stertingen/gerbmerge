@@ -1,10 +1,10 @@
+<a name="Introduction"></a>
 ## Introduction
 
-</a>As an alternative to manual placement, either using the [layout file](layoutfile.html) approach or using the <tt>--place-file</tt> command-line option, GerbMerge can automatically try to find the best arrangement of jobs on a panel that minimizes the total panel area. Using automatic placement can save you time since you don't have to construct and experiment with a layout file. The tradeoff, however, is that automatic placement may take a long time to execute, and for panels with many, small jobs, the run time may be prohibitive. On the other hand, experience suggests that good results can be obtained in just a few minutes, even when GerbMerge is not allowed to search all possibilities.<a name="Random">
+As an alternative to manual placement, either using the [layout file](layoutfile.html) approach or using the <tt>--place-file</tt> command-line option, GerbMerge can automatically try to find the best arrangement of jobs on a panel that minimizes the total panel area. Using automatic placement can save you time since you don't have to construct and experiment with a layout file. The tradeoff, however, is that automatic placement may take a long time to execute, and for panels with many, small jobs, the run time may be prohibitive. On the other hand, experience suggests that good results can be obtained in just a few minutes, even when GerbMerge is not allowed to search all possibilities.
 
+<a name="Random"></a>
 ## Randomized Search
-
-</a>
 
 ### The Basics
 
@@ -14,15 +14,11 @@ This may not sound like a very efficient approach but experience shows that it c
 
 The randomized search approach is the default automatic placement method. It is invoked simply by not specifying any layout file:
 
-<pre>
+    gerbmerge file.cfg
 
-<center>gerbmerge file.cfg</center>
+The [configuration file](cfgfile.md) must still be specified, of course. After GerbMerge starts, you may press Ctrl-C at any time to stop the process. In fact, you must press Ctrl-C at some point as GerbMerge will try random placements forever.
 
-</pre>
-
-The [configuration file](cfgfile.html) must still be specified, of course. After GerbMerge starts, you may press Ctrl-C at any time to stop the process. In fact, you must press Ctrl-C at some point as GerbMerge will try random placements forever.
-
-The best layout found when Ctrl-C is pressed will be used for panelization. Note that the layout is also saved in the file specified by the <tt>Placement</tt> assignment in the <tt>[MergeOutputFiles]</tt> section of the [configuration file](cfgfile.html). Thus, if you want to experiment, you can run different trials, save the best placements from each, then use the best one by using the saved placement file as the input to GerbMerge with the <tt>--place-file</tt> option.
+The best layout found when Ctrl-C is pressed will be used for panelization. Note that the layout is also saved in the file specified by the <tt>Placement</tt> assignment in the <tt>[MergeOutputFiles]</tt> section of the [configuration file](cfgfile.md). Thus, if you want to experiment, you can run different trials, save the best placements from each, then use the best one by using the saved placement file as the input to GerbMerge with the <tt>--place-file</tt> option.
 
 ### Random+Exhaustive
 
@@ -30,31 +26,25 @@ The default operation of GerbMerge is to actually perform a hybrid search, using
 
 You can change the number of jobs to exhaustively search for a given random placement with the <tt>--rs-fsjobs</tt> command-line option. For example,
 
-<pre>
+    gerbmerge --rs-fsjobs=2 file.cfg
 
-<center>gerbmerge --rs-fsjobs=2 file.cfg</center>
+The above example is the default behavior, i.e., exhaustively place 2 jobs and randomly place N-2 jobs. By using a number higher than 2, there is less randomness but fewer starting placements are tested per second.
 
-</pre>
-
-The above example is the default behavior, i.e., exhaustively place 2 jobs and randomly place N-2 jobs. By using a number higher than 2, there is less randomness but fewer starting placements are tested per second.<a name="Exhaustive">
-
+<a name="Exhaustive"></a>
 ## Exhaustive Search
 
-</a>The exhaustive search approach has GerbMerge try all possible placements for a given set of jobs, one by one. This sounds like it may be an exponentially long approach, and it is. For anything other than a few boards (less than 5 or so), exhaustive search is prohibitive.
+The exhaustive search approach has GerbMerge try all possible placements for a given set of jobs, one by one. This sounds like it may be an exponentially long approach, and it is. For anything other than a few boards (less than 5 or so), exhaustive search is prohibitive.
 
 The exhaustive search mode is invoked as follows:
 
-<pre>
+    gerbmerge --full-search file.cfg
 
-<center>gerbmerge --full-search file.cfg</center>
+You can stop the search at any time by pressing Ctrl-C. The best placement found so far will be used for panelization and saved in the placement file specified by the <tt>Placement</tt> value in the <tt>[MergeOutputFiles]</tt> section of the [configuration file](cfgfile.html).
 
-</pre>
-
-You can stop the search at any time by pressing Ctrl-C. The best placement found so far will be used for panelization and saved in the placement file specified by the <tt>Placement</tt> value in the <tt>[MergeOutputFiles]</tt> section of the [configuration file](cfgfile.html).<a name="Repeats">
-
+<a name="Repeats"></a>
 ## Multiple Instances
 
-</a>There is no need to repeat sections of a job in the configuration file if you want a job to appear multiple times on a panel. You can use the <tt>Repeat=N</tt> configuration option to indicate that a particular job is to have N copies on a panel. For example:
+There is no need to repeat sections of a job in the configuration file if you want a job to appear multiple times on a panel. You can use the <tt>Repeat=N</tt> configuration option to indicate that a particular job is to have N copies on a panel. For example:
 
     [irtx]
     Prefix=%(projdir)s/IRTransmitter/irtx
@@ -66,11 +56,10 @@ You can stop the search at any time by pressing Ctrl-C. The best placement found
     *SolderMaskBottom=%(prefix)s.sts
     **Repeat=5**
 
-This job specifies all the layers as usual, then the last line indicates that 5 such jobs are to appear on the final panel. They may appear in various positions and states of rotation, however.<a name="Usage">
+This job specifies all the layers as usual, then the last line indicates that 5 such jobs are to appear on the final panel. They may appear in various positions and states of rotation, however.
 
+<a name="Usage"></a>
 ## Usage Notes
-
-</a>
 
 ### Area Estimates
 
@@ -80,7 +69,7 @@ In summary, it is pointless to wait for a random search for hours to hit an esti
 
 ### Panel Width and Height
 
-Note that the <tt>PanelWidth</tt> and <tt>PanelHeight</tt> options in the [configuration file](cfgfile.html) constrain the search process. GerbMerge will not allow any placement, either by random search or exhaustive search, to exceed the panel dimensions. You can, therefore, guide the search process by choosing a panel size that is not too large, thus preventing highly-unlikely placements (think all jobs in one row) from being considered.
+Note that the <tt>PanelWidth</tt> and <tt>PanelHeight</tt> options in the [configuration file](cfgfile.md) constrain the search process. GerbMerge will not allow any placement, either by random search or exhaustive search, to exceed the panel dimensions. You can, therefore, guide the search process by choosing a panel size that is not too large, thus preventing highly-unlikely placements (think all jobs in one row) from being considered.
 
 Similarly, by choosing panels that are slightly wider than taller, or vice versa, different placements can be considered and may lead to different results. Consider these two configuration file options as a source of experimentation.
 
@@ -92,4 +81,4 @@ If you've achieved 85% utilization for a 30 sq. in. board, what will you save by
 
 * * *
 
-<center><font size="-1">© 2003-2011, Copyright by [Rugged Circuits LLC](http://ruggedcircuits.com); All Rights Reserved. mailto: [support@ruggedcircuits.com](mailto:support@ruggedcircuits.com?subject=GerbMerge)</font></center>
+© 2003-2011, Copyright by [Rugged Circuits LLC](http://ruggedcircuits.com); All Rights Reserved. mailto: [support@ruggedcircuits.com](mailto:support@ruggedcircuits.com?subject=GerbMerge)
