@@ -29,7 +29,7 @@ In release 1.8:
 
 * Released under more recent GPL v3 license
 * Summary statistics prints out smallest drill tool diameter
-* Added [<tt>FiducialPoints</tt>](cfgfile.md#FiducialPoints), [<tt>FiducialCopperDiameter</tt>](cfgfile.md#FiducialCopperDiameter), and [<tt>FiducialMaskDiameter</tt>](cfgfile.md#FiducialMaskDiameter) configuration options
+* Added [<tt>FiducialPoints</tt>](doc/cfgfile.md#FiducialPoints), [<tt>FiducialCopperDiameter</tt>](doc/cfgfile.md#FiducialCopperDiameter), and [<tt>FiducialMaskDiameter</tt>](doc/cfgfile.md#FiducialMaskDiameter) configuration options
 * Added option to write fiducials to final panel
 * Scoring lines now go all the way across a panel
 
@@ -50,8 +50,8 @@ GerbMerge currently works with:
 
 Here are two samples of the program's output. These samples demonstrate panelizing multiple, different jobs, and also demonstrate board rotation.
 
-<a href="img/sample.jpg"><img src="img/sample.jpg" alt="sample 1" height=300></img></a>
-<a href="img/sample2.jpg"><img src="img/sample2.jpg" alt="sample 2" height=300></img></a>
+<a href="doc/img/sample.jpg"><img src="doc/img/sample.jpg" alt="sample 1" height=300></img></a>
+<a href="doc/img/sample2.jpg"><img src="doc/img/sample2.jpg" alt="sample 2" height=300></img></a>
 
 ## Requirements
 
@@ -161,7 +161,7 @@ The names of these files are the two required parameters to GerbMerge:
 
     gerbmerge file.cfg file.def
 
-The following links describe the contents of the [configuration file](cfgfile.md) and [layout file](layoutfile.md).
+The following links describe the contents of the [configuration file](doc/cfgfile.md) and [layout file](doc/layoutfile.md).
 
 #### Manual Absolute Placement
 
@@ -175,17 +175,17 @@ The <tt>place.txt</tt> file looks something like:
     cpu 0.756 0.100
     cpu*rotated 1.35 1.50
 
-This method of placement is not meant for normal use. It can be used to recreate a previous invocation of GerbMerge, since GerbMerge saves its results in a text file (whose name is set in the [<tt>[MergeOutputFiles]</tt>](cfgfile.#MergeOutputFiles) section of the configuration file) after every run. Thus, you can experiment with different parameters, save a placement you like, do some more experimentation, then return to the saved placement if necessary.
+This method of placement is not meant for normal use. It can be used to recreate a previous invocation of GerbMerge, since GerbMerge saves its results in a text file (whose name is set in the [<tt>[MergeOutputFiles]</tt>](doc/cfgfile.#MergeOutputFiles) section of the configuration file) after every run. Thus, you can experiment with different parameters, save a placement you like, do some more experimentation, then return to the saved placement if necessary.
 
 Alternatively, this method of placement can be used with third-party back ends that implement intelligent auto-placement algorithms, using GerbMerge only for doing the actual panelization.
 
 #### Automatic Placement
 
-For the [automatic placement](autosearch.md) approach, GerbMerge only needs the configuration file:
+For the [automatic placement](doc/autosearch.md) approach, GerbMerge only needs the configuration file:
 
     gerbmerge file.cfg
 
-Command-line options can be used to modify the search algorithm. See the [Automatic Placement](autosearch.md) page for more information.
+Command-line options can be used to modify the search algorithm. See the [Automatic Placement](doc/autosearch.md) page for more information.
 
 ### Input File Requirements
 
