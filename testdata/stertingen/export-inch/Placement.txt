@@ -1,0 +1,16 @@
+kicadgbr45drl24inch*rotated90 0.000 0.000
+kicadgbr46drl24inch*rotated90 0.628 0.000
+kicadgbr45drl24lzinch*rotated90 1.255 0.000
+kicadgbr46drl24lzinch*rotated90 1.883 0.000
+kicadgbr45drl24tzinch*rotated90 2.510 0.000
+kicadgbr46drl24tzinch*rotated90 3.138 0.000
+kicadgbr45drl24decinch*rotated90 3.765 0.000
+kicadgbr46drl24decinch*rotated90 4.393 0.000
+kicadgbr45drl33mm*rotated90 5.020 0.000
+kicadgbr46drl33mm*rotated90 5.648 0.000
+kicadgbr45drl33lzmm*rotated90 6.276 0.000
+kicadgbr46drl33lzmm*rotated90 6.903 0.000
+kicadgbr45drl33tzmm*rotated90 7.531 0.000
+kicadgbr46drl33tzmm*rotated90 8.158 0.000
+kicadgbr45drl33decmm*rotated90 8.786 0.000
+kicadgbr46drl33decmm*rotated90 9.413 0.000
