@@ -164,7 +164,9 @@ def writeGerberFooter(fid):
 
 def writeExcellonHeader(fid):
   fid.write("M48\n")
-  if config.Config['excellonleadingzeros']:
+  if config.Config['excellonleadingzeros'] and config.Config['excellonleadingzeros'] == 'diptrace':
+    zerosDef = "0000.00"
+  elif config.Config['excellonleadingzeros']:
     zerosDef = "LZ"
   else:
     zerosDef = "TZ"

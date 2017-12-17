@@ -96,8 +96,8 @@ xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter 
                                                                 # feed/speed (for Protel)
 xtdef2_pat = re.compile(r'^(T\d+)C([0-9.]+)(?:F\d+)?(?:S\d+)?$') # Tool+diameter definition with optional
                                                                 # feed/speed at the end (for OrCAD)
-xzsup_pat = re.compile(r'^(INCH|METRIC)(,([LT])Z)?$')           # Leading/trailing zeros INCLUDED
-xmunit_pat = re.compile(r'^M7([12])$')                          # M71 (mm) / GM2 (inch) unit mode
+xzsup_pat = re.compile(r'^(INCH|METRIC)(,([LT])Z)?(,0000\.00)?$')           # Leading/trailing zeros INCLUDED
+xmunit_pat = re.compile(r'^((M7([12]))|(G7[01]))\*?$')                          # M71 (mm) / GM2 (inch) unit mode
 xkicadformat_pat = re.compile(r'^;FORMAT=\{(\d):(\d)/([A-Za-z ]+)/([A-Za-z ]+)/([A-Za-z ]+)\}')
 
 XIgnoreList = ( \
@@ -496,7 +496,7 @@ class Job:
             continue
 
           # Determine if this is a G-Code that we have to emit because it matters.
-          if gcode in [1, 2, 3, 36, 37, 74, 75]:
+          if gcode in [1, 2, 3, 36, 37, 74, 75, 70, 71]:
             self.commands[layername].append("G%02d" % gcode)
 
             # Determine if this is a G-code that sets a new mode
@@ -792,14 +792,14 @@ class Job:
       # Parse M71 and M72 lines for unit conversion
       match = xmunit_pat.match(line)
       if match:
-        if match.group(1) == '1':
+        if match.group(1) == 'M71' or match.group(1) == 'G71':
           print "Got M71 (mm)"
           if config.Config['measurementunits'] == 'inch':
             unitfactor = 1/25.4 # mm to inch
           else:
             unitfactor = 1
           continue
-        elif match.group(1) == '2':
+        elif match.group(1) == 'M72' or match.group(1) == 'G70':
           print "Got M72 (inch)"
           units = 'inch'
           if config.Config['measurementunits'] == 'mm':
