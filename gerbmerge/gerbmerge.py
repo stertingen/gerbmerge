@@ -455,6 +455,12 @@ def merge(opts, args, gui = None):
   if drawing_code_cut is None:
     drawing_code_cut = aptable.addToApertureTable(AP)
 
+  # For score lines
+  AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['scoringlinewidth'])
+  drawing_code_score = aptable.findInApertureTable(AP)
+  if drawing_code_score is None:
+    drawing_code_score = aptable.addToApertureTable(AP)
+
   # For crop marks
   AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['cropmarkwidth'])
   drawing_code_crop = aptable.findInApertureTable(AP)
@@ -534,6 +540,9 @@ def merge(opts, args, gui = None):
     if config.Config['cutlinelayers'] and (layername in config.Config['cutlinelayers']):
       apUsedDict[drawing_code_cut]=None
 
+    if config.Config['scoringlinelayers'] and (layername in config.Config['scoringlinelayers']):
+      apUsedDict[drawing_code_score]=None
+
     if config.Config['cropmarklayers'] and (layername in config.Config['cropmarklayers']):
       apUsedDict[drawing_code_crop]=None
       
@@ -565,6 +574,11 @@ def merge(opts, args, gui = None):
         fid.write('%s*\n' % drawing_code_cut)    # Choose drawing aperture
         #print "writing drawcode_cut: %s" % drawing_code_cut
         job.writeCutLines(fid, drawing_code_cut, OriginX, OriginY, MaxXExtent, MaxYExtent)
+  
+    # Draw the scoring lines
+    if config.Config['scoringlinelayers'] and layername in config.Config['scoringlinelayers']:
+      fid.write('%s*\n' % drawing_code_score)    # Choose scoring aperture
+      scoring.writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent)
 
     if config.Config['cropmarklayers']:
       if layername in config.Config['cropmarklayers']:

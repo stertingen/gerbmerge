@@ -52,6 +52,9 @@ Config = {
    'fiducialpoints': None,           # List of X,Y co-ordinates at which to draw fiducials
    'fiducialcopperdiameter': 0.08,   # Diameter of copper part of fiducial
    'fiducialmaskdiameter': 0.32,     # Diameter of fiducial soldermask opening
+   'scoringstyle': 'edge-to-edge',   # edge-to-edge or surround
+   'scoringlinelayers': None,        # e.g. *toplayer,*bottomlayer
+   'scoringlinewidth': 0,
    }
 
 # This dictionary is indexed by lowercase layer name and has as values a file

@@ -276,7 +276,7 @@ def writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent):
     # 2.5 limits.
     x,y,X,Y = [round(val,5) for val in [x,y,X,Y]]
 
-    if 0: # Scoring lines go all the way across the panel now
+    if config.Config['scoringstyle'] and config.Config['scoringstyle'] == 'surround' : # Scoring lines go all the way across the panel now
       addHorizontalLine(Lines, x, X, Y, extents)   # above job
       addVerticalLine(Lines, X, y, Y, extents)     # to the right of job
       addHorizontalLine(Lines, x, X, y, extents)   # below job
