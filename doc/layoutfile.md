@@ -6,6 +6,10 @@ The layout file is a plain text file that can be created with any text editor.
 
 Have a look at the sample layout files [<tt>layout1.def</tt>](layout1.def) and [<tt>layout2.def</tt>](layout2.def) for a quick overview of this file.
 
+** :warning: Your file MUST have a trailing new-line. **
+
+** :warning:  Columns can only be defined within a row, and rows can only be defined within a column. **
+
 <a name="RowsCols"></a>
 ## Rows and Columns
 
