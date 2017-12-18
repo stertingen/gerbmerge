@@ -203,9 +203,9 @@ This optional parameter indicates that an additional output file (Gerber layer) 
 
 The scoring lines can be drawn in two styles:
 
-  # edge-to-edge - extends every scoring line to the board edges, this is appropriate if you are using a scoring machine which can only score right across a board, you must be careful with edge-to-edge if you are not using a strict grid of the same PCB in the same orientation for your panel, if you mix pcbs or orientations you can easily end up with a score line right through some of the PCBs on the panel.  Be sure to inspect your output gerber carefully!
+  * edge-to-edge - extends every scoring line to the board edges, this is appropriate if you are using a scoring machine which can only score right across a board, you must be careful with edge-to-edge if you are not using a strict grid of the same PCB in the same orientation for your panel, if you mix pcbs or orientations you can easily end up with a score line right through some of the PCBs on the panel.  Be sure to inspect your output gerber carefully!
   
-  # surround - the scoring lines "surround" the indivudual boards, this is appropriate if you are manually cutting up your panel after manufacture and are not constrained to the limits of an automatic scoring machine.  Automatic scoring machines can almost certainly NOT score these lines, they can score only edge-to-edge.
+  * surround - the scoring lines "surround" the indivudual boards, this is appropriate if you are manually cutting up your panel after manufacture and are not constrained to the limits of an automatic scoring machine.  Automatic scoring machines can almost certainly NOT score these lines, they can score only edge-to-edge.
 </dd>
 
 <a name="ScoringLineLayers"><dt>Scoring Line Layers</dt></a>
