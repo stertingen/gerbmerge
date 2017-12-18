@@ -315,6 +315,11 @@ would place one fiducial at (0.125,0.125) relative to the lower-left, and anothe
 
     FiducialPoints = 0.125,-0.125
 
+
+**`FiducialPoints = scoring`**
+
+If you set the FiducialPoints option to `scoring` then "fiducials" will be automatically placed along each "score" (independant of ScoringFile, ScoringLineLayers) between the indivudual boards.  This can be used as a method for helping you to cut up a panel manually after fabrication if you don't want to draw complete lines in silkscreen, copper or other layer (perhaps your PCB fabricator would charge you more even just for silkscreen separated panels).  You will get 3 points along each line you should cut so you can line up a ruler/draw a line/set your saw fence... however it is you intend to slice-and-dice your FR4.
+
 The [<tt>FiducialCopperDiameter</tt>](#FiducialCopperDiameter) and [<tt>FiducialMaskDiameter</tt>](#FiducialMaskDiameter) options control the appearance of the fiducials.</dd>
 
 <dt><a name="FiducialCopperDiameter">FiducialCopperDiameter</a></dt>
