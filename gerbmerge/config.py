@@ -42,7 +42,7 @@ Config = {
    'allowmissinglayers': 0,          # Set to 1 to allow multiple jobs to have non-matching layers
    'fabricationdrawingfile': None,   # Name of file to which to write fabrication drawing, or None
    'fabricationdrawingtext': None,   # Name of file containing text to write to fab drawing
-   'excellondecimals': 4,            # Number of digits after the decimal point in input Excellon files
+   'excellondecimals': None,         # Number of digits after the decimal point in input Excellon files
    'excellonleadingzeros': 0,        # Generate leading zeros in merged Excellon output file
    'outlinelayerfile': None,         # Name of file to which to write simple box outline, or None
    'scoringfile': None,              # Name of file to which to write scoring data, or None
@@ -287,6 +287,13 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
         MinimumFeatureDimension[ temp[index] ] = float( temp[index + 1] )
     except:
       raise RuntimeError, "Illegal configuration string:" + Config['minimumfeaturesize']
+
+  # Default excellon decimals are 4 when using inch, and 3 when using mm
+  if Config['excellondecimals'] is None:
+    if Config['measurementunits'] == 'mm':
+      Config['excellondecimals'] = 3
+    elif Config['measurementunits'] == 'inch':
+      Config['excellondecimals'] = 4
 
   # Process MergeOutputFiles section to set output file names
   if CP.has_section('MergeOutputFiles'):

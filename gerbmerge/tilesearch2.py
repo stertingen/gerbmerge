@@ -16,14 +16,14 @@ import random
 import config
 import tiling
 import tilesearch1
-
 import gerbmerge
+from units import *
 
 _StartTime = 0.0           # Start time of tiling
 _CkpointTime = 0.0         # Next time to print stats
 _Placements = 0L           # Number of placements attempted
 _TBestTiling = None        # Best tiling so far
-_TBestScore  = float(sys.maxint) # Smallest area so far
+_TBestScore  = float(sys.maxint)*m**2 # Smallest area so far
 
 def printTilingStats():
   global _CkpointTime
@@ -36,18 +36,13 @@ def printTilingStats():
     area = 999999.0
     utilization = 0.0
 
-  # add metric support (1/1000 mm vs. 1/100,000 inch)
-  if config.Config['measurementunits'] == 'inch':
-    print "\r  %ld placements / Smallest area: %.1f sq. in. / Best utilization: %.1f%%" % \
-        (_Placements, area, utilization),
-  else:
-    print "\r  %ld placements / Smallest area: %.1f sq. mm / Best utilization: %.0f%%" % \
-        (_Placements, area, utilization),
+  print "\r  %ld placements / Smallest area: %s / Best utilization: %.1f%%" % \
+      (_Placements, area, utilization),
 
   if gerbmerge.GUI is not None:
     sys.stdout.flush()
 
-def _tile_search2(Jobs, X, Y, cfg=config.Config):
+def _tile_search2(Jobs, X, Y):
   global _CkpointTime, _Placements, _TBestTiling, _TBestScore
 
   r = random.Random()
@@ -58,8 +53,8 @@ def _tile_search2(Jobs, X, Y, cfg=config.Config):
   M = N - config.RandomSearchExhaustiveJobs
   M = max(M,0)
 
-  xspacing = cfg['xspacing']
-  yspacing = cfg['yspacing']
+  xspacing = config.getConfigLength('xspacing')
+  yspacing = config.getConfigLength('yspacing')
   
   # Must escape with Ctrl-C
   while 1:
@@ -129,7 +124,7 @@ def tile_search2(Jobs, X, Y):
   _CkpointTime = _StartTime + 3
   _Placements = 0L
   _TBestTiling = None
-  _TBestScore = float(sys.maxint)
+  _TBestScore = float(sys.maxint)*m**2
 
   print '='*70
   if (config.Config['searchtimeout'] > 0):

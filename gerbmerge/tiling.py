@@ -23,6 +23,7 @@ import math
 
 import config
 import jobs
+from units import *
 
 # Helper functions to determine if points are right-of, left-of, above, and
 # below each other. These definitions assume that points are on a line that
@@ -45,10 +46,10 @@ class Tiling:
     # we allow jobs (which are seated at the lower left of their cells)
     # to just fit on the panel, and not disqualify them because their
     # spacing area slightly exceeds the panel edge.
-    self.xmax = Xmax + config.Config['xspacing']
-    self.ymax = Ymax + config.Config['yspacing']
+    self.xmax = Xmax + config.getConfigLength('xspacing')
+    self.ymax = Ymax + config.getConfigLength('yspacing')
 
-    self.points = [(0,Ymax), (0,0), (Xmax,0)]    # List of (X,Y) co-ordinates
+    self.points = [(0*m,Ymax), (0*m,0*m), (Xmax,0*m)]    # List of (X,Y) co-ordinates
     self.jobs = []   # List of 3-tuples: ((Xbl,Ybl),(Xtr,Ytr),Job) where
                      # (Xbl,Ybl) is bottom left, (Xtr,Ytr) is top-right of the cell.
                      # The actual job has dimensions (Xtr-Xbl-Config['xspacing'],Ytr-Ybl-Config['yspacing'])
@@ -68,7 +69,7 @@ class Tiling:
     return len(self.points)-2
 
   def clone(self):
-    T = Tiling(self.xmax-config.Config['xspacing'], self.ymax-config.Config['yspacing'])
+    T = Tiling(self.xmax-config.getConfigLength('xspacing'), self.ymax-config.getConfigLength('yspacing'))
     T.points = self.points[:]
     T.jobs = self.jobs[:]
     return T
@@ -94,7 +95,7 @@ class Tiling:
       fid.write("%s@(%.1f,%.1f) " % (Job.name,bl[0],bl[1]))
     fid.write('\n')
 
-  def isOverlap(self, ix, X, Y, cfg=config.Config):
+  def isOverlap(self, ix, X, Y):
     """Determines if a new job with actual dimensions X-by-Y located at self.points[ix]
        overlaps any existing job or exceeds the boundaries of the panel.
        
@@ -128,7 +129,7 @@ class Tiling:
     else:
       p_bl = (self.points[ix][0]-X,self.points[ix][1])
       p_tr = (self.points[ix][0],self.points[ix][1]+Y)
-      if p_bl[0]<0 or p_tr[1]>self.ymax:
+      if p_bl[0]<0*m or p_tr[1]>self.ymax:
         return 1
 
     for t_bl,t_tr,Job in self.jobs:
@@ -278,7 +279,7 @@ mirrored-L corner __  |      |
       else:
         done = 1
 
-  def addLJob(self, ix, X, Y, Job, cfg=config.Config):
+  def addLJob(self, ix, X, Y, Job):
     """Add a job to the tiling at L-point self.points[ix] with actual dimensions X-by-Y.
     The job is added with its lower-left corner at the point. The existing point
     is removed from the tiling and new points are added at the top-left, top-right
@@ -292,7 +293,7 @@ mirrored-L corner __  |      |
         
     self.mergePoints(ix-1)
 
-  def addMirrorLJob(self, ix, X, Y, Job, cfg=config.Config):
+  def addMirrorLJob(self, ix, X, Y, Job):
     """Add a job to the tiling at mirror-L-point self.points[ix] with dimensions X-by-Y.
     The job is added with its lower-right corner at the point. The existing point
     is removed from the tiling and new points are added at the bottom-left, top-left
@@ -319,8 +320,8 @@ mirrored-L corner __  |      |
 
   def bounds(self):
     """Return 2-tuple ((minX, minY), (maxX, maxY)) of rectangular region defined by all jobs"""
-    minX = minY = float(sys.maxint)
-    maxX = maxY = 0.0
+    minX = minY = float(sys.maxint)*m
+    maxX = maxY = 0.0*m
 
     for bl,tr,job in self.jobs:
       minX = min(minX,bl[0])
@@ -328,7 +329,8 @@ mirrored-L corner __  |      |
       minY = min(minY,bl[1])
       maxY = max(maxY,tr[1])
 
-    return ( (minX,minY), (maxX-config.Config['xspacing'], maxY-config.Config['yspacing']) )
+    return ( (minX,minY), (maxX-config.getConfigLength('xspacing'),
+      maxY-config.getConfigLength('yspacing')) )
 
   def area(self):
     """Return area of rectangular region defined by all jobs."""
@@ -340,7 +342,7 @@ mirrored-L corner __  |      |
 
   def usedArea(self):
     """Return total area of just jobs, not spaces in-between."""
-    area = 0.0
+    area = 0.0*m**2
     for job in self.jobs:
       area += job[2].jobarea()
 
@@ -349,18 +351,18 @@ mirrored-L corner __  |      |
 # Function to estimate the maximum possible utilization given a list of jobs.
 # Jobs list is 4-tuple (Xdim,Ydim,job,rjob).
 def maxUtilization(Jobs):
-  xspacing = config.Config['xspacing']
-  yspacing = config.Config['yspacing']
+  xspacing = config.getConfigLength('xspacing')
+  yspacing = config.getConfigLength('yspacing')
 
-  usedArea = totalArea = 0.0
+  usedArea = totalArea = 0.0*m**2
   for Xdim,Ydim,job,rjob in Jobs:
     usedArea += job.jobarea()
     totalArea += job.jobarea()
-    totalArea += job.width_in()*xspacing + job.height_in()*yspacing + xspacing*yspacing
+    totalArea += job.width()*xspacing + job.height()*yspacing + xspacing*yspacing
     
   # Reduce total area by strip of unused spacing around top and side. Assume
   # final result will be approximately square.
-  sq_side = math.sqrt(totalArea)
+  sq_side = math.sqrt(totalArea.asNumber(mm**2))*mm
   totalArea -= sq_side*xspacing + sq_side*yspacing + xspacing*yspacing
 
   return usedArea/totalArea
@@ -368,7 +370,7 @@ def maxUtilization(Jobs):
 # Utility function to compute the minimum dimension along any axis of all jobs.
 # Used to remove inlets.
 def minDimension(Jobs):
-  M = float(sys.maxint)
+  M = float(sys.maxint)*m
   for Xdim,Ydim,job,rjob in Jobs:
     M = min(M,Xdim)
     M = min(M,Ydim)

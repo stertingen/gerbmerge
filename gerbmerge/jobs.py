@@ -97,7 +97,7 @@ xtdef_pat = re.compile(r'^(T\d+)(?:F\d+)?(?:S\d+)?C([0-9.]+)$') # Tool+diameter 
                                                                 # feed/speed (for Protel)
 xtdef2_pat = re.compile(r'^(T\d+)C([0-9.]+)(?:F\d+)?(?:S\d+)?$') # Tool+diameter definition with optional
                                                                 # feed/speed at the end (for OrCAD)
-xzsup_pat = re.compile(r'^(INCH|METRIC)(,([LT])Z)?(,0000\.00)?$')           # Leading/trailing zeros INCLUDED
+xzsup_pat = re.compile(r'^(INCH|METRIC)(,([LT])Z)?(,(0+)\.(0+))?$')           # Leading/trailing zeros INCLUDED
 xmunit_pat = re.compile(r'^((M7([12]))|(G7[01]))\*?$')                          # M71 (mm) / GM2 (inch) unit mode
 xkicadformat_pat = re.compile(r'^;FORMAT=\{(\d):(\d)/([A-Za-z ]+)/([A-Za-z ]+)/([A-Za-z ]+)\}')
 
@@ -637,13 +637,8 @@ class Job:
   def parseExcellon(self, fullname):
     print 'Reading data from %s ...' % fullname
 
-    # TODO:
-    # Parse LZ files (stripped trailing zeros)
-    # Parse x.x files (with decimal point)
-
     fid = file(fullname, 'rt')
     currtool = None
-    suppress_leading = True     # Suppress leading zeros by default, equivalent to 'INCH,TZ'
 
     # NumberParser instance. Options get set later (while parsing)
     noParser = NumberParser()
@@ -668,28 +663,6 @@ class Job:
     # Protel takes advantage of optional X/Y components when the previous one is the same,
     # so we have to remember them.
     last_x = last_y = 0
-
-    # Helper function to convert X/Y strings into integers in units of ten-thousandth of an inch.
-    def xln2tenthou(L, divisor, zeropadto):
-      V = []
-      for s in L:
-        if s is not None:
-          if not suppress_leading:
-            s = s + '0'*(zeropadto-len(s))
-          V.append(int(round(int(s)*divisor)))
-        else:
-          V.append(None)
-      return tuple(V)
-
-    # Helper function to convert X/Y strings into integers in units of ten-thousandth of an inch.
-    def xln2tenthou2 (L, divisor, zeropadto):
-      V = []
-      for s in L:
-        if s is not None:
-          V.append(int(float(s)*1000*divisor))
-        else:
-          V.append(None)
-      return tuple(V)
 
     for line in fid.xreadlines():
       # Get rid of CR characters
@@ -721,21 +694,28 @@ class Job:
       # Check for leading/trailing zeros included ("INCH,LZ" or "INCH,TZ")
       match = xzsup_pat.match(line)
       if match:
+        # Group 1: unit system
         if match.group(1)=='METRIC':
-          print "Got METRIC keyword!"
           noParser.setUnit(mm)
           noParserTool.setUnit(mm)
         elif match.group(1)=='INCH':
-          print "Got INCH keyword!"
           noParser.setUnit(inch)
           noParserTool.setUnit(inch)
 
+        # Groups 2 + 3: leading/trailing zeros
         if match.group(2)=='L':
           # LZ --> Leading zeros INCLUDED
           noParser.setOptions(omitTrailing = True, omitLeading = False)
         elif match.group(2)=='T':
           # TZ --> Trailing zeros INCLUDED
           noParser.setOptions(omitTrailing = False, omitLeading = True)
+        
+        # Groups 4, 5, 6: DipTrace-style formatting (00.0000)
+        if match.group(4) is not None:
+          # Count zeros
+          integers = len(match.group(5))
+          decimals = len(match.group(6))
+          noParser.setFormat(integers, decimals)
         continue
         
       # See if a tool is being defined. First try to match with tool name+size
@@ -756,19 +736,17 @@ class Job:
         if self.xdiam.has_key(currtool):
           raise RuntimeError, "File %s defines tool %s more than once" % (fullname, currtool)
         self.xdiam[currtool] = diam
-        #print "Tool %s has diam %f" % (currtool, diam)
+        #print "Tool %s has diam %s" % (currtool, diam)
         continue
 
       # Parse M71 and M72 lines for unit conversion
       match = xmunit_pat.match(line)
       if match:
         if match.group(1) == 'M71' or match.group(1) == 'G71':
-          print "Got M71 (mm)"
           noParser.setUnit(mm)
           noParserTool.setUnit(mm)
           continue
         elif match.group(1) == 'M72' or match.group(1) == 'G70':
-          print "Got M72 (inch)"
           noParser.setUnit(inch)
           noParserTool.setUnit(inch)
           continue
@@ -782,10 +760,8 @@ class Job:
         # as T01 and sometimes as T1. We canonicalize to T01.
         currtool = 'T%02d' % int(currtool[1:])
 
-        # KiCad specific fixes
         if currtool == 'T00':
           continue
-        # end KiCad fixes
 
         # Diameter will be obtained from embedded tool definition, local tool list or if not found, the global tool list
         try:
@@ -925,7 +901,7 @@ class Job:
 
     def formatForXln(num):
       """
-      helper to convert from our 2.4 internal format to config's excellon format
+      helper to convert from our internal format to config's excellon format
       returns string
       """
       if config.Config['excellonleadingzeros']:
@@ -954,34 +930,23 @@ class Job:
     """Write a drill hit pattern. diameter is tool diameter in inches, while toolNum is
     an integer index into strokes.DrillStrokeList"""
 
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
-    if config.Config['measurementunits'] == 'inch':
-      # First convert given inches to 2.5 co-ordinates
-      X = int(round(Xoff/0.00001))
-      Y = int(round(Yoff/0.00001))
-    else:
-      # First convert given inches to 5.3 co-ordinates
-      X = int(round(Xoff/0.001))
-      Y = int(round(Yoff/0.001))
-
     # Now calculate displacement for each position so that we end up at specified origin
-    DX = X - self.minx
-    DY = Y - self.miny
-
-    # Do NOT round down to 2.4 format. These drill hits are in Gerber 2.5 format, not
-    # Excellon plunge commands.
+    DX = Xoff - self.minx
+    DY = Yoff - self.miny
 
     ltools = self.findTools(diameter)
+
+    # Cosmetic helper for shorter lines - Excellon Format
+    def xlnfmt(num):
+      formatNumber(num, config.getUnit(), config.Config['excellondecimals'])
 
     for ltool in ltools:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
           x, y, stop_x, stop_y = cmd
-          # add metric support (1/1000 mm vs. 1/100,000 inch)
-# TODO - verify metric scaling is correct???
-          makestroke.drawDrillHit(fid, 10*x+DX, 10*y+DY, toolNum)
+          makestroke.drawDrillHit(fid, xlnfmt(x+DX), xlnfmt(y+DY), toolNum)
           if stop_x is not None:
-            makestroke.drawDrillHit(fid, 10*stop_x+DX, 10*stop_y+DY, toolNum)
+            makestroke.drawDrillHit(fid, xlnfmt(stop_x+DX), xlnfmt(stop_y+DY), toolNum)
 
   def aperturesAndMacros(self, layername):
     "Return dictionaries whose keys are all necessary aperture names and macro names for this layer"
@@ -1196,11 +1161,10 @@ class Job:
     "Remove plunge commands that are outside job dimensions"
     keys = self.xcommands.keys()
     for toolname in keys:
-      # Remember Excellon is 2.4 format while Gerber data is 2.5 format - No!
       # tup[0] = x, tup[1] = y, tup[2] = stop_x, tup[3] = stop_y
       validList = [tup for tup in self.xcommands[toolname]
-                   if (self.inBorders(10*tup[0],10*tup[1]) and
-                       (tup[2] is None or self.inBorders(10*tup[2],10*tup[3])))]
+                   if (self.inBorders(tup[0],tup[1]) and
+                       (tup[2] is None or self.inBorders(tup[2],tup[3])))]
       if validList:
         self.xcommands[toolname] = validList
       else:

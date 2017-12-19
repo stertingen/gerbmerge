@@ -14,8 +14,8 @@ import time
 
 import config
 import tiling
-
 import gerbmerge
+from units import *
 
 _StartTime = 0.0           # Start time of tiling
 _CkpointTime = 0.0         # Next time to print stats
@@ -23,7 +23,7 @@ _Placements = 0L           # Number of placements attempted
 _PossiblePermutations = 0L # Number of different ways of ordering jobs
 _Permutations = 0L         # Number of different job orderings already computed
 _TBestTiling = None        # Best tiling so far
-_TBestScore  = float(sys.maxint) # Smallest area so far
+_TBestScore  = float(sys.maxint)*m**2 # Smallest area so far
 _PrintStats = 1            # Print statistics every 3 seconds
 
 def printTilingStats():
@@ -34,7 +34,7 @@ def printTilingStats():
     area = _TBestTiling.area()
     utilization = _TBestTiling.usedArea() / area * 100.0
   else:
-    area = 999999.0
+    area = 999999.0*mm*2
     utilization = 0.0
 
   percent = 100.0*_Permutations/_PossiblePermutations
@@ -55,7 +55,7 @@ def printTilingStats():
 def bestTiling():
   return _TBestTiling
 
-def _tile_search1(Jobs, TSoFar, firstAddPoint, cfg=config.Config):
+def _tile_search1(Jobs, TSoFar, firstAddPoint):
   """This recursive function does the following with an existing tiling TSoFar:
      
      * For each 4-tuple (Xdim,Ydim,job,rjob) in Jobs, the non-rotated 'job' is selected
@@ -105,8 +105,8 @@ def _tile_search1(Jobs, TSoFar, firstAddPoint, cfg=config.Config):
       _Permutations += 1
     return
 
-  xspacing = cfg['xspacing']
-  yspacing = cfg['yspacing']
+  xspacing = config.getConfigLength('xspacing')
+  yspacing = config.getConfigLength('yspacing')
 
   minInletSize = tiling.minDimension(Jobs)
   TSoFar.removeInlets(minInletSize)
@@ -201,7 +201,7 @@ def initialize(printStats=1):
   _Placements = 0L
   _Permutations = 0L
   _TBestTiling = None
-  _TBestScore = float(sys.maxint)
+  _TBestScore = float(sys.maxint)*m**2
 
 def tile_search1(Jobs, X, Y):
   """Wrapper around _tile_search1 to handle keyboard interrupt, etc."""

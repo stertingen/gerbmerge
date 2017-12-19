@@ -301,25 +301,21 @@ def tile_jobs(Jobs):
   sortJobs.reverse()
 
   for job in sortJobs:
-    Xdim = job.width_in()
-    Ydim = job.height_in()
+    Xdim = job.width()
+    Ydim = job.height()
     rjob = jobs.rotateJob(job, 90)  ##NOTE: This will only try 90 degree rotations though 180 & 270 are available
 
     for count in range(job.Repeat):
       L.append( (Xdim,Ydim,job,rjob) )
 
-  PX,PY = config.Config['panelwidth'],config.Config['panelheight']
+  PX,PY = config.getConfigLength('panelwidth'), config.getConfigLength('panelheight')
   if config.AutoSearchType==RANDOM_SEARCH:
     tile = tilesearch2.tile_search2(L, PX, PY)
   else:
     tile = tilesearch1.tile_search1(L, PX, PY)
 
   if not tile:
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
-    if config.Config['measurementunits'] == 'inch':
-      raise RuntimeError, 'Panel size %.2f"x%.2f" is too small to hold jobs' % (PX,PY)
-    else:
-      raise RuntimeError, 'Panel size %.2fmmx%.2fmm is too small to hold jobs' % (PX,PY)
+    raise RuntimeError, 'Panel size %s x %s is too small to hold jobs' % (PX,PY)
 
   return tile
 
@@ -428,7 +424,8 @@ def merge(opts, args, gui = None):
     tile = tile_jobs(config.Jobs.values())
 
     Place = placement.Placement()
-    Place.addFromTiling(tile, OriginX + config.Config['leftmargin'], OriginY + config.Config['bottommargin'])
+    Place.addFromTiling(tile, OriginX + config.getConfigLength('leftmargin'), \
+        OriginY + config.getConfigLength('bottommargin'))
 
   (MaxXExtent,MaxYExtent) = Place.extents()
   MaxXExtent += config.getConfigLength('rightmargin')
