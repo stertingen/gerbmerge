@@ -18,6 +18,8 @@ import string
 import config
 import amacro
 import util
+from units import *
+from unum import Unum
 
 # Recognized apertures and re pattern that matches its definition Thermals and
 # annuli are generated using macros (see the eagle.def file) but only on inner
@@ -45,6 +47,7 @@ for ap in Apertures:
 class Aperture:
   def __init__(self, aptype, code, dimx, dimy=None):
     assert aptype in Apertures
+    assert isinstance(dimx, (Unum, str))
     self.apname, self.pat, self.format = aptype
     self.code = code
     self.dimx = dimx      # Macro name for Macro apertures
@@ -59,22 +62,26 @@ class Aperture:
   def rectangleAsRect(self, X, Y):
     """Return a 4-tuple (minx,miny,maxx,maxy) describing the area covered by
     this Rectangle aperture when flashed at center co-ordinates (X,Y)"""
-    dx = util.in2gerb(self.dimx)
-    dy = util.in2gerb(self.dimy)
+    xm = self.dimx / 2
+    ym = self.dimy / 2
+    
+    #dx = util.in2gerb(self.dimx)
+    #dy = util.in2gerb(self.dimy)
+    return (X-xm, Y-ym, X+xm, Y+ym)
 
-    if dx & 1:    # Odd-sized: X extents are (dx+1)/2 on the left and (dx-1)/2 on the right
-      xm = (dx+1)/2
-      xp = xm-1
-    else:         # Even-sized: X extents are X-dx/2 and X+dx/2
-      xm = xp = dx/2
+    #if dx & 1:    # Odd-sized: X extents are (dx+1)/2 on the left and (dx-1)/2 on the right
+    #  xm = (dx+1)/2
+    #  xp = xm-1
+    #else:         # Even-sized: X extents are X-dx/2 and X+dx/2
+    #  xm = xp = dx/2
 
-    if dy & 1:    # Odd-sized: Y extents are (dy+1)/2 below and (dy-1)/2 above
-      ym = (dy+1)/2
-      yp = ym-1
-    else:         # Even-sized: Y extents are Y-dy/2 and Y+dy/2
-      ym = yp = dy/2
+    #if dy & 1:    # Odd-sized: Y extents are (dy+1)/2 below and (dy-1)/2 above
+    #  ym = (dy+1)/2
+    #  yp = ym-1
+    #else:         # Even-sized: Y extents are Y-dy/2 and Y+dy/2
+    #  ym = yp = dy/2
 
-    return (X-xm, Y-ym, X+xp, Y+yp)
+    #return (X-xm, Y-ym, X+xp, Y+yp)
     
   def getAdjusted(self, minimum):
     """
@@ -138,25 +145,32 @@ class Aperture:
     #      return ('%s: %s (%.4f)' % (self.code, self.apname, self.dimx))
 
   def hash(self):
-    if self.dimy:
-      return ('%s (%.5f x %.5f)' % (self.apname, self.dimx, self.dimy))
+    if self.dimy is not None and self.dimy.asNumber(mm):
+      return ('%s (%.5f x %.5f)' % (self.apname, self.dimx.asNumber(mm), self.dimy.asNumber(mm)))
     else:
       if self.apname in ('Macro',):
         return ('%s (%s)' % (self.apname, self.dimx))
       else:
-        return ('%s (%.5f)' % (self.apname, self.dimx))
+        return ('%s (%.5f)' % (self.apname, self.dimx.asNumber(mm)))
 
   def writeDef(self, fid):
-    if self.dimy:
-      fid.write(self.format % (self.code, self.dimx, self.dimy))
+    # Do instance checks since dimx might be a string
+    if isinstance(self.dimx, Unum):
+      dimx = self.dimx.asNumber(config.getUnit())
     else:
-      fid.write(self.format % (self.code, self.dimx))
+      dimx = self.dimx
+
+    if self.dimy is not None:
+      dimy = self.dimy.asNumber(config.getUnit())
+      fid.write(self.format % (self.code, dimx, dimy))
+    else:
+      fid.write(self.format % (self.code, dimx))
 
 # Parse the aperture definition in line 's'. macroNames is an aperture macro dictionary
 # that translates macro names local to this file to global names in the GAMT. We make
 # the translation right away so that the return value from this function is an aperture
 # definition with a global macro name, e.g., 'ADD10M5'
-def parseAperture(s, knownMacroNames, units):
+def parseAperture(s, knownMacroNames, noParser):
   for ap in Apertures:
     match = ap[1].match(s)
     if match:
@@ -172,21 +186,9 @@ def parseAperture(s, knownMacroNames, units):
         else:
           raise RuntimeError, 'Aperture Macro name "%s" not defined' % dimx
       else:
-        try:
-          unitfactor = 1
-          if config.Config['measurementunits'] != units:
-            if units == 'inch': # inch to mm
-              unitfactor = 25.4
-            elif units == 'mm': # mm to inch
-              unitfactor = 1/25.4
-            else:
-              raise RuntimeError, "Undefined unit system"
-
-          dimx = unitfactor * float(dimx)
-          if dimy:
-            dimy = unitfactor * float(dimy)
-        except:
-          raise RuntimeError, "Illegal floating point aperture size"
+        dimx = noParser.parse(dimx)
+        if dimy:
+          dimy = noParser.parse(dimy)
 
       return Aperture(ap, code, dimx, dimy)
 
@@ -222,12 +224,15 @@ def constructApertureTable(fileList):
   RevGAMT = {}          # Dictionary keyed by aperture macro hash and returning macro name
 
   AT = {}               # Aperture Table for this file
+
+
   for fname in fileList:
     #print 'Reading apertures from %s ...' % fname
 
     knownMacroNames = {}
     
-    units = ''
+    # Number parser instance
+    noParser = NumberParser(decimalPoint = True)
 
     fid = file(fname,'rt')
     for line in fid:
@@ -245,12 +250,12 @@ def constructApertureTable(fileList):
 
       # Detect inch unit format
       if line[:7]=='%MOIN*%':
-        units = 'inch'
+        noParser.setUnit(inch)
         continue
       
       # Detect mm unit format
       if line[:7]=='%MOMM*%':
-        units = 'mm'
+        noParser.setUnit(mm)
         continue
 
       # parseApertureMacro() sucks up all macro lines up to terminating '%'
@@ -271,7 +276,7 @@ def constructApertureTable(fileList):
           knownMacroNames[localMacroName] = AM.name
           RevGAMT[AM.hash()] = AM.name
       else:
-        A = parseAperture(line, knownMacroNames, units)
+        A = parseAperture(line, knownMacroNames, noParser)
 
         # If this is an aperture definition, add the string representation
         # to the dictionary. It might already exist.

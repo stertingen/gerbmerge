@@ -28,6 +28,7 @@ import makestroke
 import amacro
 import geometry
 import util
+from units import *
 
 # Parsing Gerber/Excellon files is currently very brittle. A more robust
 # RS274X/Excellon parser would be a good idea and allow this program to work
@@ -125,8 +126,8 @@ class Job:
     # in GERBER data only (not Excellon). Note that coordinates
     # are stored in hundred-thousandsths of an inch so 9999999 is 99.99999
     # inches.
-    self.maxx = self.maxy = -9999999  # in the case all coordinates are < 0, this will prevent maxx and maxy from defaulting to 0
-    self.minx = self.miny = 9999999
+    self.maxx = self.maxy = -9999999*m  # in the case all coordinates are < 0, this will prevent maxx and maxy from defaulting to 0
+    self.minx = self.miny = 9999999*m
 
     # Aperture translation table relative to GAT. This dictionary
     # has as each key a layer name for the job. Each key's value
@@ -198,27 +199,17 @@ class Job:
     # to be combined.
     self.ExcellonDecimals = 0     # 0 means global value prevails
 
-  def width_in(self):
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
-    if config.Config['measurementunits'] == 'inch':
-      "Return width in INCHES"
-      return float(self.maxx-self.minx)*0.00001
-    else:
-      return float(self.maxx-self.minx)*0.001
+  def width(self):
+    return self.maxx-self.minx 
 
-  def height_in(self):
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
-    if config.Config['measurementunits'] == 'inch':
-      "Return height in INCHES"
-      return float(self.maxy-self.miny)*0.00001
-    else:
-      return float(self.maxy-self.miny)*0.001
+  def height(self):
+    return self.maxy-self.miny
 
   def jobarea(self):
-    return self.width_in()*self.height_in()
+    return self.width()*self.height()
 
   def maxdimension(self):
-    return max(self.width_in(),self.height_in())
+    return max(self.width(),self.height())
 
   def mincoordinates(self):
     "Return minimum X and Y coordinate"
@@ -243,8 +234,8 @@ class Job:
         # Shift X and Y coordinate of command
         if type(c) == types.TupleType:                      ## ensure that command is of type tuple
           command_list = list(c)                            ## convert tuple to list
-          if  (type( command_list[0] ) == types.IntType) \
-          and (type( command_list[1] ) == types.IntType):  ## ensure that first two elemenst are integers
+          if  (type( command_list[0] ) == Unum) \
+          and (type( command_list[1] ) == Unum):  ## ensure that first two elemenst are unum values
             command_list[0] += x_shift
             command_list[1] += y_shift
           command[index] = tuple(command_list)              ## convert list back to tuple
@@ -293,17 +284,10 @@ class Job:
     self.commands[layername] = []
     self.apertures[layername] = []
 
-    # These divisors are used to scale (X,Y) co-ordinates. We store
-    # everything as integers in hundred-thousandths of an inch (i.e., M.5
-    # format). If we get something in M.4 format, we must multiply by
-    # 10. If we get something in M.6 format we must divide by 10, etc.
-    x_div = 1.0
-    y_div = 1.0
-
     # Drawing commands can be repeated with X or Y omitted if they are
     # the same as before. These variables store the last X/Y value as
     # integers in hundred-thousandths of an inch.
-    last_x = last_y = 0
+    last_x = last_y = 0 * mm
 
     # Last modal G-code. Some G-codes introduce "modes", such as circular interpolation
     # mode, and we want to remember what mode we're in. We're interested in:
@@ -329,8 +313,9 @@ class Job:
     # to manually insert the point X000000Y00000 into the command stream.
     firstFlash = True
 
-    # Unit system for this file, either mm or inch
-    units = ''
+    # Number parser instance, this contains our unit, our format and our format options
+    noParser = NumberParser()
+    noParserAP = NumberParser(decimalPoint = True)
 
     for line in fid:
       # Get rid of CR characters (0x0D) and leading/trailing blanks
@@ -341,25 +326,14 @@ class Job:
       if match:
         if currtool:
           raise RuntimeError, "File %s has a measurement unit definition that comes after drawing commands." % fullname
-
         if match.group(1) == 'MM':
-          units = 'mm'
-          unitfactor = 1/25.4
+          noParser.setUnit(mm)
+          noParserAP.setUnit(mm)
         else:
-          units = 'inch'
-          unitfactor = 25.4
-        
-        # x_div and y_div have been set earlier, but with the wrong units,
-        # so correct them here
-        if config.Config['measurementunits'] != units:
-          x_div = x_div * unitfactor
-          y_div = y_div * unitfactor
-
+          noParser.setUnit(inch)
+          noParserAP.setUnit(inch)
         continue
       
-
-      # Old location of format_pat search. Now moved down into the sub-line parse loop below.
-
       # RS-274X statement? If so, echo it. Currently, only the "LP" statement is expected
       # (from Protel, of course). These will be distinguished from D-code and G-code
       # commands by the fact that the first character of the string is '%'.
@@ -374,7 +348,7 @@ class Job:
         if currtool:
           raise RuntimeError, "File %s has an aperture definition that comes after drawing commands." % fullname
 
-        A = aptable.parseAperture(line, self.apmxlat[layername], units)
+        A = aptable.parseAperture(line, self.apmxlat[layername], noParserAP)
         if not A:
           raise RuntimeError, "Unknown aperture definition in file %s" % fullname
 
@@ -435,45 +409,33 @@ class Job:
           for item in match.groups():
             if item is None: continue   # Optional group didn't match
 
-            if item[0] in "LA":   # omit leading zeroes and absolute co-ordinates
+            # Omit leading zeros
+            if item[0]=='L':
+              noParser.setOptions(omitLeading = True)
               continue
-
-            if item[0]=='T':      # omit trailing zeroes
-              raise RuntimeError, "Trailing zeroes not supported in RS274X files"
-            if item[0]=='I':      # incremental co-ordinates
-              raise RuntimeError, "Incremental co-ordinates not supported in RS274X files"
-
-            if item[0]=='N':      # Maximum digits for N* commands...ignore it
+            # Omit trailing zeros
+            if item[0]=='T':
+              noParser.setOptions(omitTrailing = True)
               continue
-
-            # Conversion factor between desired and actual unit system
-            unitfactor = 1
-            if config.Config['measurementunits'] != units:
-              if units == "mm":
-                # We have mm, but we want inch
-                unitfactor = 1/25.4
-              elif units == "inch":
-                # We have inch, but we want mm
-                unitfactor = 25.4
-              # In some gbr files, our unit system in unknown at this point. We will correct x_div and y_div later.
-
-            if config.Config['measurementunits'] == 'inch':
-              # Scale to 1/100000 inch
-              if item[0]=='X':      # M.N specification for X-axis.
-                fracpart = int(item[2])
-                x_div = unitfactor * 10.0**(5-fracpart)
-              if item[0]=='Y':      # M.N specification for Y-axis.
-                fracpart = int(item[2])
-                y_div = unitfactor * 10.0**(5-fracpart)
-            else:
-              # Scale to 1/1000 mm
-              if item[0]=='X':      # M.N specification for X-axis.
-                fracpart = int(item[2])
-                x_div = unitfactor * 10.0**(3-fracpart)
-              if item[0]=='Y':      # M.N specification for Y-axis.
-                fracpart = int(item[2])
-                y_div = unitfactor * 10.0**(3-fracpart)
-      
+            # Absolute positions
+            if item[0]=='A':
+              noParser.setOptions(incremental = False)
+              continue
+            # incremental positions
+            if item[0]=='I':
+              noParser.setOptions(incremental = True)
+              continue
+            # Maximum digits for N* commands...ignore it
+            if item[0]=='N':
+              continue
+            # M.N specification for X-axis.
+            if item[0]=='X':
+              noParser.setFormat(item[1], item[2])
+              continue
+            # M.N specification for Y-axis.
+            if item[0]=='Y':
+              noParser.setFormat(item[1], item[2])
+              continue
           continue
 
         # Parse and interpret G-codes
@@ -487,11 +449,11 @@ class Job:
             continue
 
           # Check if gcode matches unit
-          if gcode==70 and units!="inch":
+          if gcode==70 and noParser.unit == mm:
             raise RuntimeError, "GCode 70 (inch) does not correspond to %MOMM*% (mm)!"
             continue
           
-          if gcode==71 and units!="mm":
+          if gcode==71 and noParser.unit == inch:
             raise RuntimeError, "GCode 71 (mm) does not correspond to %MOIN*% (inch)!"
             continue
 
@@ -566,35 +528,50 @@ class Job:
         isLastShorthand = False    # By default assume we don't make use of last_x and last_y
         if match:
           x, y, d = map(__builtin__.int, match.groups())
+          x = noParser.parse(match.group(1))
+          y = noParser.parse(match.group(2))
+          d = int(match.group(3))
         else:
           match = drawX_pat.match(sub_line)
           if match:
-            x, d = map(__builtin__.int, match.groups())
+            x = noParser.parse(match.group(1))
             y = last_y
+            d = int(match.group(2))
             isLastShorthand = True  # Indicate we're making use of last_x/last_y
           else:
             match = drawY_pat.match(sub_line)
             if match:
-              y, d = map(__builtin__.int, match.groups())
               x = last_x
+              y = noParser.parse(match.group(1))
+              d = int(match.group(2))
               isLastShorthand = True  # Indicate we're making use of last_x/last_y
 
         # Maybe it's a circular interpolation draw command with IJ components
         if match is None:
           match = cdrawXY_pat.match(sub_line)
           if match:
-            x, y, I, J, d = map(__builtin__.int, match.groups())
+            x = noParser.parse(match.group(1))
+            y = noParser.parse(match.group(2))
+            I = noParser.parse(match.group(3))
+            J = noParser.parse(match.group(4))
+            d = int(match.group(5))
           else:
             match = cdrawX_pat.match(sub_line)
             if match:
-              x, I, J, d = map(__builtin__.int, match.groups())
+              x = noParser.parse(match.group(1))
               y = last_y
+              I = noParser.parse(match.group(2))
+              J = noParser.parse(match.group(3))
+              d = int(match.group(4))
               isLastShorthand = True  # Indicate we're making use of last_x/last_y
             else:
               match = cdrawY_pat.match(sub_line)
               if match:
-                y, I, J, d = map(__builtin__.int, match.groups())
                 x = last_x
+                y = noParser.parse(match.group(1))
+                I = noParser.parse(match.group(2))
+                J = noParser.parse(match.group(3))
+                d = int(match.group(4))
                 isLastShorthand = True  # Indicate we're making use of last_x/last_y
 
         if match:
@@ -616,16 +593,12 @@ class Job:
           if (isLastShorthand and firstFlash):
             self.commands[layername].append((0,0,2))
             if updateExtents:
-              self.minx = min(self.minx,0)
-              self.maxx = max(self.maxx,0)
-              self.miny = min(self.miny,0)
-              self.maxy = max(self.maxy,0)
+              self.minx = min(self.minx,0*mm)
+              self.maxx = max(self.maxx,0*mm)
+              self.miny = min(self.miny,0*mm)
+              self.maxy = max(self.maxy,0*mm)
 
-          x = int(round(x*x_div))
-          y = int(round(y*y_div))
           if I is not None:
-            I = int(round(I*x_div))
-            J = int(round(J*y_div))
             self.commands[layername].append((x,y,I,J,d,circ_signed))
           else:
             self.commands[layername].append((x,y,d))
@@ -672,6 +645,11 @@ class Job:
     currtool = None
     suppress_leading = True     # Suppress leading zeros by default, equivalent to 'INCH,TZ'
 
+    # NumberParser instance. Options get set later (while parsing)
+    noParser = NumberParser()
+    # Used for tool definitions
+    noParserTool = NumberParser(decimalPoint = True)
+
     # We store Excellon X/Y data in ten-thousandths of an inch. If the Config
     # option ExcellonDecimals is not 4, we must adjust the values read from the
     # file by a divisor to convert to ten-thousandths.  This is only used in
@@ -679,14 +657,13 @@ class Job:
     # trailing-zero-pad all input integers to M+N digits (e.g., 6 digits for 2.4 mode)
     # specified by the 'zeropadto' variable.
     if self.ExcellonDecimals > 0:
-      decimal_divisor = 10.0**(4 - self.ExcellonDecimals)
-      zeropadto = 2+self.ExcellonDecimals
+      decimals = self.ExcellonDecimals
     else:
-      decimal_divisor = 10.0**(4 - config.Config['excellondecimals'])
-      zeropadto = 2+config.Config['excellondecimals']
+      decimals = config.Config['excellondecimals']
 
-    unitfactor = 1 # Default, may change; divisor will also be updated then
-    divisor = decimal_divisor * unitfactor
+    # Assume 6 digits.
+    # TODO: Make this variable when sanity checks are implemented in the number parser
+    noParser.setFormat(6-decimals, decimals)
     
     # Protel takes advantage of optional X/Y components when the previous one is the same,
     # so we have to remember them.
@@ -726,20 +703,18 @@ class Job:
       # KiCAD is nice: It adds a comment to the header containing information for the decimal places
       match = xkicadformat_pat.match(line)
       if match:
-        new_pre = int(match.group(1))
+        new_integers = int(match.group(1))
         new_decimals = int(match.group(2))
         if self.ExcellonDecimals > 0:
           if new_decimals != self.ExcellonDecimals:
             raise RuntimeError, "File has %d Excellon decimals (according to header coment), but config said %d!" % (new_decimals, self.ExcellonDecimals)
         else:
-          decimal_divisor = 10.0**(4 - new_decimals)
-          zeropadto = new_pre + new_decimals
-          divisor = decimal_divisor + unitfactor
-        print "KiCAD comment found! Format %d.%d" % (new_pre, new_decimals)
+          noParser.setFormat(new_integers, new_decimals)
+        print "KiCAD comment found! Format %d.%d" % (new_integers, new_decimals)
         continue
 
       # Protel likes to embed comment lines beginning with ';'
-      # Important: after KiCAD match since there might be useful information!
+      # Important: after KiCAD format match since there might be useful information!
       if line[0]==';':
         continue
 
@@ -748,24 +723,19 @@ class Job:
       if match:
         if match.group(1)=='METRIC':
           print "Got METRIC keyword!"
-          if config.Config['measurementunits'] == 'inch':
-            unitfactor = 1/25.4
-          else:
-            unitfactor = 1
+          noParser.setUnit(mm)
+          noParserTool.setUnit(mm)
         elif match.group(1)=='INCH':
           print "Got INCH keyword!"
-          if config.Config['measurementunits'] == 'mm':
-            unitfactor = 25.4
-          else:
-            unitfactor = 1
-        divisor = decimal_divisor * unitfactor
+          noParser.setUnit(inch)
+          noParserTool.setUnit(inch)
 
         if match.group(2)=='L':
           # LZ --> Leading zeros INCLUDED
-          suppress_leading = False
-        else:
+          noParser.setOptions(omitTrailing = True, omitLeading = False)
+        elif match.group(2)=='T':
           # TZ --> Trailing zeros INCLUDED
-          suppress_leading = True
+          noParser.setOptions(omitTrailing = False, omitLeading = True)
         continue
         
       # See if a tool is being defined. First try to match with tool name+size
@@ -775,7 +745,7 @@ class Job:
       if match:
         currtool, diam = match.groups()
         try:
-          diam = unitfactor * float(diam)
+          diam = noParserTool.parse(diam)
         except:
           raise RuntimeError, "File %s has illegal tool diameter '%s'" % (fullname, diam)
 
@@ -794,20 +764,14 @@ class Job:
       if match:
         if match.group(1) == '1':
           print "Got M71 (mm)"
-          if config.Config['measurementunits'] == 'inch':
-            unitfactor = 1/25.4 # mm to inch
-          else:
-            unitfactor = 1
+          noParser.setUnit(mm)
+          noParserTool.setUnit(mm)
           continue
         elif match.group(1) == '2':
           print "Got M72 (inch)"
-          units = 'inch'
-          if config.Config['measurementunits'] == 'mm':
-            unitfactor = 25.4 # inch to mm
-          else:
-            unitfactor = 1
+          noParser.setUnit(inch)
+          noParserTool.setUnit(inch)
           continue
-        divisor = decimal_divisor * unitfactor
 
       # Didn't match TxxxCyyy. It could be a tool change command 'Tdd'.
       match = xtool_pat.match(line)
@@ -845,20 +809,24 @@ class Job:
       # Plunge command?
       match = xydraw_pat.match(line)
       if match:
-        x, y, stop_x, stop_y = xln2tenthou(match.groups(), divisor, zeropadto)
+        x, y, stop_x, stop_y = [noParser.parse(val) for val in match.groups()]
       else:
         match = xydraw_pat2.match(line)
         if match:
-          x, y, stop_x, stop_y = xln2tenthou2(match.groups(), divisor, zeropadto)
+          # This match contains decimal points, so we cannot user our 
+          # specially configured NumberParser here. Instead, we use the
+          # NumberParser for tool definitions, which use decimal points
+          # anyway
+          x, y, stop_x, stop_y = [noParserTool.parse(val) for val in match.groups()]
         else:
           match = xdraw_pat.match(line)
           if match:
-            x = xln2tenthou(match.groups(), divisor, zeropadto)[0]
+            x = noParser.parse(match.groups(1))
             y = last_y
           else:
             match = ydraw_pat.match(line)
             if match:
-              y = xln2tenthou(match.groups(), divisor, zeropadto)[0]
+              y = noParser.parse(match.groups(1))
               x = last_x
           
       if match:
@@ -890,19 +858,17 @@ class Job:
     # Maybe we don't have this layer
     if not self.hasLayer(layername): return
 
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
+    # Calculate X and Y as first printable coordinates
     if config.Config['measurementunits'] == 'inch':
-      # First convert given inches to 2.5 co-ordinates
-      X = int(round(Xoff/0.00001))
-      Y = int(round(Yoff/0.00001))
+      decimals = 5
     else:
-      # First convert given mm to 5.3 co-ordinates
-      X = int(round(Xoff/0.001))
-      Y = int(round(Yoff/0.001))
+      decimals = 3
+    X = formatNumber(Xoff, config.getUnit(), decimals)
+    Y = formatNumber(Yoff, config.getUnit(), decimals)
 
     # Now calculate displacement for each position so that we end up at specified origin
-    DX = X - self.minx
-    DY = Y - self.miny
+    DX = Xoff - self.minx
+    DY = Yoff - self.miny
 
     # Rock and roll. First, write out a dummy flash using code D02
     # (exposure off). This prevents an unintentional draw from the end
@@ -914,10 +880,16 @@ class Job:
       if type(cmd) is types.TupleType:
         if len(cmd)==3:
           x, y, d = cmd
-          fid.write('X%07dY%07dD%02d*\n' % (x+DX, y+DY, d))
+          x = formatNumber(x + DX, config.getUnit(), decimals)
+          y = formatNumber(y + DY, config.getUnit(), decimals)
+          fid.write('X%07dY%07dD%02d*\n' % (x, y, d))
         else:
           x, y, I, J, d, s = cmd
-          fid.write('X%07dY%07dI%07dJ%07dD%02d*\n' % (x+DX, y+DY, I, J, d)) # I,J are relative
+          x = formatNumber(x + DX, config.getUnit(), decimals)
+          y = formatNumber(y + DY, config.getUnit(), decimals)
+          I = formatNumber(I, config.getUnit(), decimals)
+          J = formatNumber(J, config.getUnit(), decimals)
+          fid.write('X%07dY%07dI%07dJ%07dD%02d*\n' % (x, y, I, J, d)) # I,J are relative
       else:
         # It's an aperture change, G-code, or RS274-X command that begins with '%'. If
         # it's an aperture code, the aperture has already been translated
@@ -941,28 +913,13 @@ class Job:
     args:
       fid - output file
       diameter
-      Xoff - offset of this board instance in full units (float)
-      Yoff - offset of this board instance in full units (float)
+      Xoff - offset of this board instance
+      Yoff - offset of this board instance
     """
 
-    # First convert given inches to 2.4 co-ordinates. Note that Gerber is 2.5 (as of GerbMerge 1.2)
-    # and our internal Excellon representation is 2.4 as of GerbMerge
-    # version 0.91. We use X,Y to calculate DX,DY in 2.4 units (i.e., with a
-    # resolution of 0.0001".
-    if config.Config['measurementunits'] == 'inch':
-      X = int(round(Xoff/0.00001))  # First work in 2.5 format to match Gerber
-      Y = int(round(Yoff/0.00001))
-    else:
-      X = int(round(Xoff/0.001))  # First work in 5.3 format to match Gerber
-      Y = int(round(Yoff/0.001))
-
-    # Now calculate displacement for each position so that we end up at specified origin
-    DX = X - self.minx
-    DY = Y - self.miny
-
-    # Now round down to 2.4 format
-    DX = int(round(DX/10.0))
-    DY = int(round(DY/10.0))
+    # Calculate displacement for each position so that we end up at specified origin
+    DX = Xoff - self.minx
+    DY = Yoff - self.miny
 
     ltools = self.findTools(diameter)
 
@@ -971,12 +928,11 @@ class Job:
       helper to convert from our 2.4 internal format to config's excellon format
       returns string
       """
-      divisor = 10.0**(4 - config.Config['excellondecimals'])
       if config.Config['excellonleadingzeros']:
         fmtstr = '%06d'
       else:
         fmtstr = '%d'
-      return fmtstr % (num / divisor)
+      return fmtstr % formatNumber(num, config.getUnit(), config.Config['excellondecimals'])
 
     # Boogie
     for ltool in ltools:
@@ -1371,11 +1327,11 @@ class JobLayout:
     self.x=x
     self.y=y
 
-  def width_in(self):
-    return self.job.width_in()
+  def width(self):
+    return self.job.width()
 
-  def height_in(self):
-    return self.job.height_in()
+  def height(self):
+    return self.job.height()
 
   def drillhits(self, diameter):
     tools = self.job.findTools(diameter)
@@ -1476,10 +1432,10 @@ def rotateJob(job, degrees = 90, firstpass = True):
       # Is it a drawing command?
       if type(cmd) is types.TupleType:
         if len(cmd)==3:
-          x, y, d = map(__builtin__.int, cmd)
+          x, y, d = cmd
           II=JJ=None
         else:
-          x, y, II, JJ, d, signed = map(__builtin__.int, cmd)   # J is already used as Job object
+          x, y, II, JJ, d, signed = cmd   # J is already used as Job object
       else:
         # No, must be a string indicating aperture change, G-code, or RS274-X command.
         if cmd[0] in ('G', '%'):
@@ -1530,21 +1486,12 @@ def rotateJob(job, degrees = 90, firstpass = True):
     J.xcommands[tool] = []
 
     for x,y,stop_x,stop_y in job.xcommands[tool]:
-# add metric support (1/1000 mm vs. 1/100,000 inch)
-# NOTE: There don't appear to be any need for a change. The usual x10 factor seems to apply
-
-      newx = -(10*y - job.miny) + job.minx + offset
-      newy =  (10*x - job.minx) + job.miny
-
-      newx = int(round(newx/10.0))
-      newy = int(round(newy/10.0))
+      newx = -(y - job.miny) + job.minx + offset
+      newy =  (x - job.minx) + job.miny
 
       if stop_x is not None:
-        newstop_x = -(10*stop_y - job.miny) + job.minx + offset
-        newstop_y =  (10*stop_x - job.minx) + job.miny
-
-        newstop_x = int(round(newstop_x/10.0))
-        newstop_y = int(round(newstop_y/10.0))
+        newstop_x = -(stop_y - job.miny) + job.minx + offset
+        newstop_y =  (stop_x - job.minx) + job.miny
       else:
         newstop_x = None
         newstop_y = None

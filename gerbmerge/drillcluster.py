@@ -163,11 +163,11 @@ def str_d(drills):
     try:
         len(drills)
     except:
-        string =  "%.4f" % drills
+        string =  "%s" % drills
     else:
         string = "["
         for drill in drills:
-            string += ( "%.4f" % drill + ", ")
+            string += ( "%s" % drill + ", ")
         string = string[:len(string) - 2] + "]"
         
     return string

@@ -18,6 +18,8 @@ import re
 
 import parselayout
 import jobs
+import config
+from units import *
 
 class Placement:
   def __init__(self):
@@ -41,22 +43,27 @@ class Placement:
 
   def extents(self):
     """Return the maximum X and Y value over all jobs"""
-    maxX = 0.0
-    maxY = 0.0
+    maxX = 0.0*mm
+    maxY = 0.0*mm
 
     for job in self.jobs:
-      maxX = max(maxX, job.x+job.width_in())
-      maxY = max(maxY, job.y+job.height_in())
+      maxX = max(maxX, job.x+job.width())
+      maxY = max(maxY, job.y+job.height())
 
     return (maxX,maxY)
 
   def write(self, fname):
     """Write placement to a file"""
+    if config.Config['measurementunits'] == 'mm':
+      unit = mm
+    elif config.Config['measurementunits'] == 'inch':
+      unit = inch
+
     fid = file(fname, 'wt')
     for job in self.jobs:
-      fid.write('%s %.3f %.3f\n' % (job.job.name, job.x, job.y))
+      fid.write('%s %.3f %.3f\n' % (job.job.name, job.x.asNumber(unit), job.y.asNumber(unit)))
       # added; thought it would be useful to know
-      print "job locations: job - %s x,y(%f,%f)" % (job.job.name, job.x, job.y)
+      print "job locations: job - %s x,y(%s,%s)" % (job.job.name, job.x, job.y)
     fid.close()
 
   def addFromFile(self, fname, Jobs):

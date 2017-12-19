@@ -21,6 +21,7 @@ import string
 
 import jobs
 import aptable
+from units import *
 
 # Configuration dictionary. Specify floats as strings. Ints can be specified
 # as ints or strings.
@@ -404,6 +405,18 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
 
   if do_abort:
     raise RuntimeError, 'Exiting since jobs are missing layers. Set AllowMissingLayers=1\nto override.'
+
+def getUnit():
+  """Helper to get the unit specified in the config"""
+  unit = Config['measurementunits']
+  if (unit == 'mm'):
+    return mm
+  elif (unit == 'inch'):
+    return inch
+
+def getConfigLength(name):
+  """Helper to get a config value in the right unit"""
+  return Config[name] * getUnit()
 
 if __name__=="__main__":
   CP = parseConfigFile(sys.argv[1])

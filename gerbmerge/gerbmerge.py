@@ -45,6 +45,7 @@ import schwartz
 import util
 import scoring
 import drillcluster
+from units import *
 
 # make version info available when running as script
 from __version_info__ import __version__
@@ -178,7 +179,7 @@ def writeExcellonFooter(fid):
   fid.write('M30\n')
 
 def writeExcellonTool(fid, tool, size):
-  fid.write('%sC%f\n' % (tool, size))
+  fid.write('%sC%f\n' % (tool, size.asNumber(config.getUnit())))
 
 def writeFiducials(fid, drawcode, OriginX, OriginY, MaxXExtent, MaxYExtent):
   """Place fiducials at arbitrary points. The FiducialPoints list in the config specifies
@@ -374,12 +375,8 @@ def merge(opts, args, gui = None):
       print '(%d instances)' % job.Repeat
     else:
       print
-    print '  Extents: (%d,%d)-(%d,%d)' % (job.minx,job.miny,job.maxx,job.maxy)
-    # add metric support (1/1000 mm vs. 1/100,000 inch)
-    if config.Config['measurementunits'] == 'inch':
-      print '  Size: %f" x %f"' % (job.width_in(), job.height_in())
-    else:
-      print '  Size: %5.3fmm x %5.3fmm' % (job.width_in(), job.height_in())
+    print '  Extents: (%s,%s)-(%s,%s)' % (job.minx,job.miny,job.maxx,job.maxy)
+    print '  Size: %s x %s' % (job.width(), job.height())
     print
 
   # Trim drill locations and flash data to board extents
@@ -398,7 +395,7 @@ def merge(opts, args, gui = None):
   # We start origin at (0.1", 0.1") just so we don't get numbers close to 0
   # which could trip up Excellon leading-0 elimination.
   # I don't want to change the origin. If this a code bug, then it should be fixed (SDD)
-  OriginX = OriginY = 0 #0.1
+  OriginX = OriginY = 0*mm #0.1
 
   # Read the layout file and construct the nested list of jobs. If there
   # is no layout file, do auto-layout.
@@ -408,12 +405,12 @@ def merge(opts, args, gui = None):
     Layout = parselayout.parseLayoutFile(args[1])
 
     # Do the layout, updating offsets for each component job.
-    X = OriginX + config.Config['leftmargin']
-    Y = OriginY + config.Config['bottommargin']
+    X = OriginX + config.getConfigLength('leftmargin')
+    Y = OriginY + config.getConfigLength('bottommargin')
 
     for row in Layout:
       row.setPosition(X, Y)
-      Y += row.height_in() + config.Config['yspacing']
+      Y += row.height() + config.getConfigLength('yspacing')
 
     # Construct a canonical placement from the layout
     Place = placement.Placement()
@@ -432,8 +429,8 @@ def merge(opts, args, gui = None):
     Place.addFromTiling(tile, OriginX + config.Config['leftmargin'], OriginY + config.Config['bottommargin'])
 
   (MaxXExtent,MaxYExtent) = Place.extents()
-  MaxXExtent += config.Config['rightmargin']
-  MaxYExtent += config.Config['topmargin']
+  MaxXExtent += config.getConfigLength('rightmargin')
+  MaxYExtent += config.getConfigLength('topmargin')
 
   # Start printing out the Gerbers. In preparation for drawing cut marks
   # and crop marks, make sure we have an aperture to draw with. Use a 10mil line.
@@ -448,13 +445,13 @@ def merge(opts, args, gui = None):
   OutputFiles.append(fullname)
 
   # For cut lines
-  AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['cutlinewidth'])
+  AP = aptable.Aperture(aptable.Circle, 'D??', config.getConfigLength('cutlinewidth'))
   drawing_code_cut = aptable.findInApertureTable(AP)
   if drawing_code_cut is None:
     drawing_code_cut = aptable.addToApertureTable(AP)
 
   # For crop marks
-  AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['cropmarkwidth'])
+  AP = aptable.Aperture(aptable.Circle, 'D??', config.getConfigLength('cropmarkwidth'))
   drawing_code_crop = aptable.findInApertureTable(AP)
   if drawing_code_crop is None:
     drawing_code_crop = aptable.addToApertureTable(AP)
@@ -462,17 +459,18 @@ def merge(opts, args, gui = None):
   # For fiducials
   drawing_code_fiducial_copper = drawing_code_fiducial_soldermask = None
   if config.Config['fiducialpoints']:
-    AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['fiducialcopperdiameter'])
+    AP = aptable.Aperture(aptable.Circle, 'D??', config.getConfigLength('fiducialcopperdiameter'))
     drawing_code_fiducial_copper = aptable.findInApertureTable(AP)
     if drawing_code_fiducial_copper is None:
       drawing_code_fiducial_copper = aptable.addToApertureTable(AP)
-    AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['fiducialmaskdiameter'])
+    AP = aptable.Aperture(aptable.Circle, 'D??', config.getConfigLength('fiducialmaskdiameter'))
     drawing_code_fiducial_soldermask = aptable.findInApertureTable(AP)
     if drawing_code_fiducial_soldermask is None:
       drawing_code_fiducial_soldermask = aptable.addToApertureTable(AP)
 
   # For fabrication drawing.
-  AP = aptable.Aperture(aptable.Circle, 'D??', 0.001)
+  # TODO: Why 0.001 inch?
+  AP = aptable.Aperture(aptable.Circle, 'D??', 0.001*inch)
   drawing_code1 = aptable.findInApertureTable(AP)
   if drawing_code1 is None:
     drawing_code1 = aptable.addToApertureTable(AP)
@@ -651,7 +649,7 @@ def merge(opts, args, gui = None):
 
     # Cluster similar tool sizes to reduce number of drills
     if config.Config['drillclustertolerance'] > 0:
-      config.GlobalToolRMap = drillcluster.cluster( config.GlobalToolRMap, config.Config['drillclustertolerance'] )
+      config.GlobalToolRMap = drillcluster.cluster( config.GlobalToolRMap, config.getConfigLength('drillclustertolerance'))
       drillcluster.remap( Place.jobs, config.GlobalToolRMap.items() )
 
     # Now construct mapping of tool numbers to diameters
@@ -700,8 +698,6 @@ def merge(opts, args, gui = None):
       
     writeExcellonTool(fid, tool, size)
 
-    #for row in Layout:
-    #  row.writeExcellon(fid, size)
     for job in Place.jobs:
         job.writeExcellon(fid, size)
   
@@ -711,9 +707,7 @@ def merge(opts, args, gui = None):
   updateGUI("Closing files...")
 
   # Compute stats
-  jobarea = 0.0
-  #for row in Layout:
-  #  jobarea += row.jobarea()
+  jobarea = 0.0*mm*mm
   for job in Place.jobs:
     jobarea += job.jobarea()
     
@@ -723,10 +717,6 @@ def merge(opts, args, gui = None):
   drillhits = 0
   for tool in Tools:
     ToolStats[tool]=0
-    #for row in Layout:
-    #  hits = row.drillhits(config.GlobalToolMap[tool])
-    #  ToolStats[tool] += hits
-    #  drillhits += hits
     for job in Place.jobs:
       hits = job.drillhits(config.GlobalToolMap[tool])
       ToolStats[tool] += hits
@@ -741,45 +731,38 @@ def merge(opts, args, gui = None):
   fid = file(fullname, 'wt')
 
   print '-'*50
-  # add metric support (1/1000 mm vs. 1/100,000 inch)
-  if config.Config['measurementunits'] == 'inch':
-    print '     Job Size : %f" x %f"' % (MaxXExtent-OriginX, MaxYExtent-OriginY)
-    print '     Job Area : %.2f sq. in.' % totalarea
-  else:
-    print '     Job Size : %.2fmm x %.2fmm' % (MaxXExtent-OriginX, MaxYExtent-OriginY)
-    print '     Job Area : %.0f mm2' % totalarea
+  print '     Job Size : %s x %s' % (MaxXExtent-OriginX, MaxYExtent-OriginY)
+  print '     Job Area : %s' % totalarea
 
   print '   Area Usage : %.1f%%' % (jobarea/totalarea*100)
   print '   Drill hits : %d' % drillhits
   if config.Config['measurementunits'] == 'inch':
-    print 'Drill density : %.1f hits/sq.in.' % (drillhits/totalarea)
+    print 'Drill density : %.1f hits/sq.in.' % (drillhits/totalarea.asNumber(inch*inch))
   else:
-    print 'Drill density : %.2f hits/cm2' % (100*drillhits/totalarea)
+    print 'Drill density : %.2f hits/cm2' % (100*drillhits/totalarea.asNumber(cm*cm))
 
   print '\nTool List:'
-  smallestDrill = 999.9
+  smallestDrill = 999.9*m
   for tool in Tools:
     if ToolStats[tool]:
       if config.Config['measurementunits'] == 'inch':
-        fid.write('%s %.4fin\n' % (tool, config.GlobalToolMap[tool]))
-        print '  %s %.4f" %5d hits' % (tool, config.GlobalToolMap[tool], ToolStats[tool])
+        fid.write('%s %.4fin\n' % (tool, config.GlobalToolMap[tool].asNumber(inch)))
       else:
-        fid.write('%s %.4fmm\n' % (tool, config.GlobalToolMap[tool]))
-        print '  %s %.4fmm %5d hits' % (tool, config.GlobalToolMap[tool], ToolStats[tool])
+        fid.write('%s %.4fmm\n' % (tool, config.GlobalToolMap[tool].asNumber(mm)))
+
+      print '  %s %s %5d hits' % (tool, config.GlobalToolMap[tool], ToolStats[tool])
       smallestDrill = min(smallestDrill, config.GlobalToolMap[tool])
 
   fid.close()
-  if config.Config['measurementunits'] == 'inch':
-    print "Smallest Tool: %.4fin" % smallestDrill
-  else:
-    print "Smallest Tool: %.4fmm" % smallestDrill
+  print "Smallest Tool: %s" % smallestDrill
 
   print
   print 'Output Files :'
   for f in OutputFiles:
     print '  ', f
 
-  if (MaxXExtent-OriginX)>config.Config['panelwidth'] or (MaxYExtent-OriginY)>config.Config['panelheight']:
+  if (MaxXExtent-OriginX)>config.getConfigLength('panelwidth') \
+  or (MaxYExtent-OriginY)>config.getConfigLength('panelheight'):
     print '*'*75
     print '*'
     # add metric support (1/1000 mm vs. 1/100,000 inch)
