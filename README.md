@@ -3,6 +3,11 @@
 <P><HR ALIGN=LEFT></P>
 
 <H2>What's New</H2>
+<p>In release 1.9.5</p>
+<ul>
+<li>Set interpreter to python2 for Archlinux compatibility</li>
+</ul>
+
 <p>In release 1.9.4</p>
 <ul>
 <li>Metric support fixed and tested with Diptrace</li>
