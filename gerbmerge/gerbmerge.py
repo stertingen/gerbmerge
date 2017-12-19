@@ -453,7 +453,7 @@ def merge(opts, args, gui = None):
     drawing_code_cut = aptable.addToApertureTable(AP)
  
   # For score lines
-  AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['scoringlinewidth'])
+  AP = aptable.Aperture(aptable.Circle, 'D??', config.getConfigLength('scoringlinewidth'))
   drawing_code_score = aptable.findInApertureTable(AP)
   if drawing_code_score is None:
     drawing_code_score = aptable.addToApertureTable(AP)

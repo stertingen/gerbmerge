@@ -10,6 +10,7 @@ In release 1.10.0 (mostly broken!)
 
 * Auto-detect if a file is in metric or imperial units and convert measurements to target unit
 * Better KiCAD support
+* Some scoring features
 
 In release 1.9.5 (stable-ish version, use this one!)
 
