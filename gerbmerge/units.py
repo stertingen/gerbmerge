@@ -17,6 +17,12 @@ import config
 
 unit = Unum.unit
 
+# Format customization
+Unum.UNIT_SEP = '*'
+Unum.UNIT_FORMAT = '%s'
+Unum.UNIT_INDENT = ''
+
+# Define imperial units
 mil     = MIL   = unit('mil',   25.4 * UM,  'mil')
 inch    = INCH  = unit('inch',  25.4 * MM,  'inch')
 
