@@ -64,8 +64,14 @@ GerbMerge is written in pure [Python](http://www.python.org). It depends upon th
 
 * [Python](http://www.python.org) version 2.4 or later, version 3.x is not supported!
 * [SimpleParse](http://simpleparse.sourceforge.net) version 2.1.0 or later
+* [Unum](http://home.scarlet.be/be052320/Unum.html) version 4.1.3 or later
 
-All of the above packages come with easy installation programs for both Windows, Mac OS X, and Linux. ## Automatic Installation with PIP This repository can generate a tarball for installation with PIP. In the repository, run: ``` $ python setup.py sdist $ pip install dist/gerbmerge-1.9.4.tar.gz ``` PIP will automatically resolve the dependencies. `-1.9.4` will change with the current tool version. To easily run the installed package without looking up your python path, use python's "run module as script" feature: ``` $ python -m gerbmerge <args>```</args>
+All of the above packages come with easy installation programs for both Windows, Mac OS X, and Linux. ## Automatic Installation with PIP This repository can generate a tarball for installation with PIP. In the repository, run:
+
+    $ python setup.py sdist
+    $ pip install dist/gerbmerge-1.10.0.tar.gz
+    
+PIP will automatically resolve the dependencies. `-1.10.0` will change with the current tool version. To easily run the installed package without looking up your python path, use python's "run module as script" feature: ``` $ python -m gerbmerge <args>```</args>
 
 ## Installation
 
