@@ -219,38 +219,37 @@ def writeCropMarks(fid, drawing_code, OriginX, OriginY, MaxXExtent, MaxYExtent):
 
   # should we be using 'cropmarkwidth' from config.py?
   if config.Config['measurementunits'] == 'inch':
-    cropW = 0.125 #inch
+    cropW = 0.125*inch
   else:
-    cropW = 3 #mm
-
+    cropW = 3*mm
   
   # Lower-left
   x = OriginX + offset
   y = OriginY + offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x+cropW), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+cropW)))
+  fid.write('X%07dY%07dD02*\n' % (fmtNumberGbr(x+cropW), fmtNumberGbr(y)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y+cropW)))
 
   # Lower-right
   x = MaxXExtent - offset
   y = OriginY + offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+cropW)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x-cropW), util.in2gerb(y+0.000)))
+  fid.write('X%07dY%07dD02*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y+cropW)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x-cropW), fmtNumberGbr(y)))
 
   # Upper-right
   x = MaxXExtent - offset
   y = MaxYExtent - offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x-cropW), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y-cropW)))
+  fid.write('X%07dY%07dD02*\n' % (fmtNumberGbr(x-cropW), fmtNumberGbr(y)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y-cropW)))
 
   # Upper-left
   x = OriginX + offset
   y = MaxYExtent - offset
-  fid.write('X%07dY%07dD02*\n' % (util.in2gerb(x+0.000), util.in2gerb(y-cropW)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+0.000), util.in2gerb(y+0.000)))
-  fid.write('X%07dY%07dD01*\n' % (util.in2gerb(x+cropW), util.in2gerb(y+0.000)))
+  fid.write('X%07dY%07dD02*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y-cropW)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x),       fmtNumberGbr(y)))
+  fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x+cropW), fmtNumberGbr(y)))
 
 def disclaimer():
   print """
@@ -604,20 +603,20 @@ def merge(opts, args, gui = None):
     # Write width-1 aperture to file
     # add metric support
     if config.Config['measurementunits'] == 'inch':
-      AP = aptable.Aperture(aptable.Circle, 'D10', 0.001)
+      AP = aptable.Aperture(aptable.Circle, 'D10', 0.001*inch)
     else:
-      AP = aptable.Aperture(aptable.Circle, 'D10', 0.25) # we'll use 0.25 mm - same as Diptrace
+      AP = aptable.Aperture(aptable.Circle, 'D10', 0.25*mm) # we'll use 0.25 mm - same as Diptrace
     AP.writeDef(fid)
 
     # Choose drawing aperture D10
     fid.write('D10*\n')
 
     # Draw the rectangle
-    fid.write('X%07dY%07dD02*\n' % (util.in2gerb(OriginX), util.in2gerb(OriginY)))        # Bottom-left
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(OriginX), util.in2gerb(MaxYExtent)))     # Top-left
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(MaxXExtent), util.in2gerb(MaxYExtent)))  # Top-right
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(MaxXExtent), util.in2gerb(OriginY)))     # Bottom-right
-    fid.write('X%07dY%07dD01*\n' % (util.in2gerb(OriginX), util.in2gerb(OriginY)))        # Bottom-left
+    fid.write('X%07dY%07dD02*\n' % (fmtNumberGbr(OriginX), fmtNumberGbr(OriginY)))        # Bottom-left
+    fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(OriginX), fmtNumberGbr(MaxYExtent)))     # Top-left
+    fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(MaxXExtent), fmtNumberGbr(MaxYExtent)))  # Top-right
+    fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(MaxXExtent), fmtNumberGbr(OriginY)))     # Bottom-right
+    fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(OriginX), fmtNumberGbr(OriginY)))        # Bottom-left
 
     writeGerberFooter(fid)
     fid.close()
@@ -631,7 +630,7 @@ def merge(opts, args, gui = None):
     writeGerberHeader(fid)
 
     # Write width-1 aperture to file
-    AP = aptable.Aperture(aptable.Circle, 'D10', 0.001)
+    AP = aptable.Aperture(aptable.Circle, 'D10', 0.001*inch)
     AP.writeDef(fid)
 
     # Choose drawing aperture D10

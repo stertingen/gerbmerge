@@ -1,2 +1,7 @@
 DipTrace_Example/
 stertingen/export-*/
+olegart/*/merged/
+daniels/merge1.*
+daniels/merge2.*
+daniels/*.merge1.*
+daniels/*.merge2.*

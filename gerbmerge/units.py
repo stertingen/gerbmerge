@@ -13,6 +13,7 @@ http://github.com/stertingen/gerbmerge
 
 from unum.units.si import *
 from unum import Unum
+import config
 
 unit = Unum.unit
 
@@ -73,6 +74,17 @@ def formatNumber(number, unit, decimals):
     #assert isinstance(unit, Unum)
     #assert isinstance(decimals, int)
     return int(round(number.asNumber(unit) * 10**decimals))
+
+def fmtNumberGbr(number):
+    if config.Config['measurementunits'] == 'mm':
+        return formatNumber(number, mm, 3)
+    elif config.Config['measurementunits'] == 'inch':
+        return formatNumber(number, inch, 5)
+    else:
+        raise RuntimeError, "Unknown measurement unit in config!"
+
+def fmtNumberXln(number):
+    return formatNumber(number, config.getUnit(), config.Config['excellondecimals'])
 
 del Unum
 del unit

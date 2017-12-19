@@ -12,14 +12,15 @@ http://ruggedcircuits.com/gerbmerge
 """
 
 import math
+from units import *
 
 # Ensure all list elements are unique
 def uniqueify(L):
   return {}.fromkeys(L).keys()
 
 # This function rounds an (X,Y) point to integer co-ordinates
-def roundPoint(pt):
-  return (int(round(pt[0])),int(round(pt[1])))
+#def roundPoint(pt):
+#  return (int(round(pt[0])),int(round(pt[1])))
 
 # Returns True if the segment defined by endpoints p1 and p2 is vertical
 def isSegmentVertical(p1, p2):
@@ -31,20 +32,22 @@ def isSegmentHorizontal(p1, p2):
 
 # Returns slope of a non-vertical line segment
 def segmentSlope(p1, p2):
-  return float(p2[1]-p1[1])/(p2[0]-p1[0])
+  return (p2[1]-p1[1])/(p2[0]-p1[0])
 
 # Determine if the (X,Y) 'point' is on the line segment defined by endpoints p1
 # and p2, both (X,Y) tuples. It's assumed that the point is on the line defined
-# by the segment, but just may be beyond the endpoints. NOTE: No testing is
-# performed to see if the point is actually on the line defined by the segment!
-# This is assumed!
+# by the segment, but just may be beyond the endpoints.
 def isPointOnSegment(point, p1, p2):
   if isSegmentVertical(p1,p2):
     # Treat vertical lines by comparing Y-ordinates
-    return (point[1]-p2[1])*(point[1]-p1[1]) <= 0
+    return (point[0] == p1[0]) and ((p1[1] <= point[1] <= p2[1]) or (p2[1] <= point[1] <= p1[1]))
+  elif isSegmentHorizontal(p1,p2):
+    # Treat horizontal lines by comparing X-ordinates
+    return (point[1] == p1[1]) and ((p1[0] <= point[0] <= p2[0]) or (p2[0] <= point[0] <= p1[0]))
   else:
-    # Treat other lines, including horizontal lines, by comparing X-ordinates
-    return (point[0]-p2[0])*(point[0]-p1[0]) <= 0
+    print " Warning! Segment (%s, %s), (%s, %s) is neither vertical nor horizontal!" % (p1[0], p1[1], p2[0], p2[1])
+    # Treat rest as horizontal (as before the unit overhaul)
+    return ((p1[0] <= point[0] <= p2[0]) or (p2[0] <= point[0] <= p1[0]))
 
 # Returns (X,Y) point where the line segment defined by (X,Y) endpoints p1 and
 # p2 intersects the line segment defined by endpoints q1 and q2. Only a single
@@ -76,7 +79,8 @@ def segmentXsegment1pt(p1, p2, q1, q2):
 
   # Candidate point identified. Check to make sure it's on both line segments.
   if isPointOnSegment((x,y), p1, p2) and isPointOnSegment((x,y), q1, q2):
-    return roundPoint((x,y))
+    #return roundPoint((x,y))
+    return (x,y)
   else:
     return None
 
@@ -274,18 +278,8 @@ def rectHeight(rect):
 
 # Return center (X,Y) co-ordinates of rectangle.
 def rectCenter(rect):
-  dx = rectWidth(rect)
-  dy = rectHeight(rect)
-
-  if dx & 1:    # Odd width: center is (left+right)/2 + 1/2
-    X = (rect[0] + rect[2] + 1)/2
-  else:         # Even width: center is (left+right)/2
-    X = (rect[0] + rect[2])/2
-
-  if dy & 1:
-    Y = (rect[1] + rect[3] + 1)/2
-  else:
-    Y = (rect[1] + rect[3])/2
+  X = (rect[0] + rect[2])/2
+  Y = (rect[1] + rect[3])/2
 
   return (X,Y)
 

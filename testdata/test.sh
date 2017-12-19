@@ -1,7 +1,15 @@
 #!/bin/sh
-cd stertingen
-#python2 ../../gerbmerge/gerbmerge.py --skipdisclaimer layout-inch.cfg layout.def
-#python2 ../../gerbmerge/gerbmerge.py --skipdisclaimer layout-mm.cfg layout.def
-cd ../DipTrace_Example
-python2 ../../gerbmerge/gerbmerge.py --skipdisclaimer layout.cfg
-cd ..
+set -e
+GERBMERGE="python2 $(readlink -f ../gerbmerge/gerbmerge.py) --skipdisclaimer"
+TESTROOT=$(pwd)
+for CFG in $(find . -name "*.cfg"); do
+    cd $(dirname $CFG)
+    DEF=$(sed 's/\.cfg$/\.def/g' <<< $(basename $CFG))
+    if [ -r $DEF ]; then
+        echo "Running GerbMerge in $(dirname $CFG) with Config $(basename $CFG) and Layout $DEF ..."
+        $GERBMERGE $(basename $CFG) $DEF
+    fi
+    echo "Running GerbMerge in $(dirname $CFG) with Config $CFG ..."
+    $GERBMERGE $(basename $CFG)
+    cd $TESTROOT
+done

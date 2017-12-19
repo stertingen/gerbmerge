@@ -12,6 +12,7 @@ http://ruggedcircuits.com/gerbmerge
 import config
 import util
 import makestroke
+from units import *
 
 # Add a horizontal line if its within the extents of the panel. Also, trim
 # start and/or end points to the extents.
@@ -54,7 +55,7 @@ def clusterOrdinates(values):
     if currCluster is None:
       currCluster = (val,)
     else:
-      if (val - currCluster[0]) <= 0.002:
+      if (val - currCluster[0]) <= 2*mil:
         currCluster = currCluster + (val,)
       else:
         L.append(currCluster)
@@ -77,7 +78,7 @@ def mergeHLines(Lines):
 
   # Obtain the average value of the Y ordinate and use that as the Y ordinate for
   # all lines.
-  yavg = 0.0
+  yavg = 0.0*m
   for line in Lines:
     yavg += line[1]
   yavg /= len(Lines)
@@ -93,7 +94,7 @@ def mergeHLines(Lines):
     else:
       # If the line to examine starts to the left of (within 0.002") the end
       # of the current line, extend the current line.
-      if line[0] <= currLine[2]+0.002:
+      if line[0] <= currLine[2]+0.002*inch:
         currLine = (currLine[0], yavg, max(line[2],currLine[2]), yavg)
       else:
         NewLines.append(currLine)
@@ -119,7 +120,7 @@ def mergeVLines(Lines):
 
   # Obtain the average value of the X ordinate and use that as the X ordinate for
   # all lines.
-  xavg = 0.0
+  xavg = 0.0*m
   for line in Lines:
     xavg += line[0]
   xavg /= len(Lines)
@@ -135,7 +136,7 @@ def mergeVLines(Lines):
     else:
       # If the line to examine starts below (within 0.002") the end
       # of the current line, extend the current line.
-      if line[1] <= currLine[3]+0.002:
+      if line[1] <= currLine[3]+0.002*inch:
         currLine = (xavg, currLine[1], xavg, max(line[3],currLine[3]))
       else:
         NewLines.append(currLine)
@@ -187,7 +188,7 @@ def mergeLines(Lines):
     for line in lines[1:]:
       # If this line's left edge is within 2 mil of the right edge of the line
       # we're currently trying to grow, then grow it.
-      if abs(line[0] - xline[2]) <= 0.002:    # Arbitrary 2mil?
+      if abs(line[0] - xline[2]) <= 2*mil:    # Arbitrary 2mil?
         # Extend...
         xline = (xline[0], xline[1], line[2], xline[1])
       else:
@@ -209,7 +210,7 @@ def mergeLines(Lines):
     for line in lines[1:]:
       # If this line's bottom edge is within 2 mil of the top edge of the line
       # we're currently trying to grow, then grow it.
-      if abs(line[1] - xline[3]) <= 0.002:    # Arbitrary 2mil?
+      if abs(line[1] - xline[3]) <= 2*mil:    # Arbitrary 2mil?
         # Extend...
         xline = (xline[0], xline[1], xline[0], line[3])
       else:
@@ -261,20 +262,20 @@ def writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent):
   # For each job, write out 4 score lines, above, to the right, below, and
   # to the left. After we collect all potential scoring lines, we worry
   # about merging, etc.
-  dx = config.Config['xspacing']/2.0
-  dy = config.Config['yspacing']/2.0
+  dx = config.getConfigLength('xspacing')/2.0
+  dy = config.getConfigLength('yspacing')/2.0
   extents = (OriginX, OriginY, MaxXExtent, MaxYExtent)
 
   Lines = []
   for layout in Place.jobs:
     x = layout.x - dx
     y = layout.y - dy
-    X = layout.x + layout.width_in() + dx
-    Y = layout.y + layout.height_in() + dy
+    X = layout.x + layout.width() + dx
+    Y = layout.y + layout.height() + dy
 
     # Just so we don't get 3.75000000004 and 3.75000000009, we round to
     # 2.5 limits.
-    x,y,X,Y = [round(val,5) for val in [x,y,X,Y]]
+    #x,y,X,Y = [round(val,5) for val in [x,y,X,Y]]
 
     if config.Config['scoringstyle'] and config.Config['scoringstyle'] == 'surround' : # Scoring lines go all the way across the panel now
       addHorizontalLine(Lines, x, X, Y, extents)   # above job
@@ -339,7 +340,7 @@ def writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent):
   
   if fid != None:
     for line in Lines:
-      makestroke.drawPolyline(fid, [(util.in2gerb(line[0]),util.in2gerb(line[1])), \
-                                    (util.in2gerb(line[2]),util.in2gerb(line[3]))], 0, 0)
+      makestroke.drawPolyline(fid, [(fmtNumberGbr(line[0]),fmtNumberGbr(line[1])), \
+                                    (fmtNumberGbr(line[2]),fmtNumberGbr(line[3]))], 0, 0)
 
 # vim: expandtab ts=2 sw=2 ai syntax=python

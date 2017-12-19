@@ -284,7 +284,7 @@ def parseConfigFile(fname, Config=Config, Jobs=Jobs):
     temp = Config['minimumfeaturesize'].split(",")
     try:
       for index in range(0, len(temp), 2):
-        MinimumFeatureDimension[ temp[index] ] = float( temp[index + 1] )
+        MinimumFeatureDimension[ temp[index] ] = float( temp[index + 1] ) * getUnit()
     except:
       raise RuntimeError, "Illegal configuration string:" + Config['minimumfeaturesize']
 

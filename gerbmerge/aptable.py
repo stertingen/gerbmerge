@@ -91,15 +91,15 @@ class Aperture:
     dimx = dimy = None
    
     # Check for X and Y dimensions less than minimum
-    if (self.dimx != None) and (self.dimx < minimum):
+    if (self.dimx is not None) and (self.dimx < minimum):
         dimx = minimum
-    if (self.dimy != None) and (self.dimx < minimum):
+    if (self.dimy is not None) and (self.dimy < minimum):
         dimy = minimum   
     
     # Return new aperture if needed
-    if (dimx != None) or (dimy != None):
-      if dimx==None: dimx=self.dimx
-      if dimy==None: dimy=self.dimy
+    if (dimx is not None) or (dimy is not None):
+      if dimx is None: dimx=self.dimx
+      if dimy is None: dimy=self.dimy
       return Aperture( (self.apname, self.pat, self.format), self.code, dimx, dimy )
     else:
       return False ## no new aperture needs to be created

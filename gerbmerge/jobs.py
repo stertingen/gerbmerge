@@ -936,17 +936,13 @@ class Job:
 
     ltools = self.findTools(diameter)
 
-    # Cosmetic helper for shorter lines - Excellon Format
-    def xlnfmt(num):
-      formatNumber(num, config.getUnit(), config.Config['excellondecimals'])
-
     for ltool in ltools:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
           x, y, stop_x, stop_y = cmd
-          makestroke.drawDrillHit(fid, xlnfmt(x+DX), xlnfmt(y+DY), toolNum)
+          makestroke.drawDrillHit(fid, fmtNumberXln(x+DX), fmtNumberXln(y+DY), toolNum)
           if stop_x is not None:
-            makestroke.drawDrillHit(fid, xlnfmt(stop_x+DX), xlnfmt(stop_y+DY), toolNum)
+            makestroke.drawDrillHit(fid, fmtNumberXln(stop_x+DX), fmtNumberXln(stop_y+DY), toolNum)
 
   def aperturesAndMacros(self, layername):
     "Return dictionaries whose keys are all necessary aperture names and macro names for this layer"
@@ -1034,15 +1030,9 @@ class Job:
                 # We arbitrarily remove all flashes that lead to rectangles
                 # with a width or length less than 1 mil (10 Gerber units). - sdd s.b. 0.1mil???
                 # Should we make this configurable?
-# add metric support (1/1000 mm vs. 1/100,000 inch)
-#                if config.Config['measurementunits'] == 'inch':
-#                  minFlash = 10;
-#                else
-#                  minFlash = 
-                if min(newRectWidth, newRectHeight) >= 10: # sdd - change for metric case at some point
+                if min(newRectWidth, newRectHeight) >= 1*mil:
                   # Construct an Aperture that is a Rectangle of dimensions (newRectWidth,newRectHeight)
-                  newAP = aptable.Aperture(aptable.Rectangle, 'D??', \
-                            util.gerb2in(newRectWidth), util.gerb2in(newRectHeight))
+                  newAP = aptable.Aperture(aptable.Rectangle, 'D??', newRectWidth, newRectHeight)
                   global_code = aptable.findOrAddAperture(newAP)
 
                   # We need an unused local aperture code to correspond to this newly-created global one.
@@ -1216,7 +1206,7 @@ class JobLayout:
       # the merged boardoutline file invalid, but we aren't using it with this method.
       temp = []
       for x in self.job.commands[outline_layer]:
-        if x[0] == 'D':
+        if isinstance(x, str) and x[0] == 'D':
           temp.append(drawing_code) ## replace old aperture with new one
         else:
           temp.append(x)        ## keep old command
