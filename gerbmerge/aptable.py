@@ -343,6 +343,8 @@ def findOrAddAperture(AP):
   else:
     return addToApertureTable(AP)
 
+
+
 if __name__=="__main__":
   constructApertureTable(sys.argv[1:])
 

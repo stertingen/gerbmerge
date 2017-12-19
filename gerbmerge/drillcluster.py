@@ -187,6 +187,8 @@ def drillsToString(drills):
 
     return string
     
+
+
 """ 
     The following code runs test drill clusterings with random drill sets.
 """

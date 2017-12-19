@@ -21,6 +21,7 @@ import string
 import __builtin__
 import copy
 import types
+from unum import Unum
 
 import aptable
 import config
@@ -51,17 +52,19 @@ apmdef_pat = re.compile(r'^%AM([^*$]+)\*$')           # Aperture macro definitio
 comment_pat = re.compile(r'G0?4[^*]*\*')              # Comment (GerbTool comment omits the 0)
 tool_pat  = re.compile(r'(D\d+)\*')                   # Aperture selection
 gcode_pat = re.compile(r'G(\d{1,2})\*?')              # G-codes
-drawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)D0?([123])\*')  # Drawing command
-drawX_pat  = re.compile(r'X([+-]?\d+)D0?([123])\*')        # Drawing command, Y is implied
-drawY_pat  = re.compile(r'Y([+-]?\d+)D0?([123])\*')        # Drawing command, X is implied
+drawXYf_pat = re.compile(r'(?:X([+-]?\d+))?(?:Y([+-]?\d+))?(?:D0?([123]))?\*')  # Drawing command
+#drawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)D0?([123])\*')  # Drawing command
+#drawX_pat  = re.compile(r'X([+-]?\d+)D0?([123])\*')        # Drawing command, Y is implied
+#drawY_pat  = re.compile(r'Y([+-]?\d+)D0?([123])\*')        # Drawing command, X is implied
 format_pat = re.compile(r'%FS(L|T)?(A|I)(N\d+)?(X\d\d)(Y\d\d)\*%')  # Format statement
 layerpol_pat = re.compile(r'^%LP[CD]\*%')             # Layer polarity (D=dark, C=clear)
 measunit_pat = re.compile(r'^%MO(IN|MM)\*%')
 
 # Circular interpolation drawing commands (from Protel)
-cdrawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')
-cdrawX_pat  = re.compile(r'X([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')  # Y is implied
-cdrawY_pat  = re.compile(r'Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')  # X is implied
+cdrawXYf_pat = re.compile(r'(?:X([+-]?\d+))?(?:Y([+-]?\d+))?(?:I([+-]?\d+))?(?:J([+-]?\d+))?(?:D0?([123]))?\*')
+#cdrawXY_pat = re.compile(r'X([+-]?\d+)Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')
+#cdrawX_pat  = re.compile(r'X([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')  # Y is implied
+#cdrawY_pat  = re.compile(r'Y([+-]?\d+)I([+-]?\d+)J([+-]?\d+)D0?([123])\*')  # X is implied
 
 IgnoreList = ( \
   # These are for Eagle, and RS274X files in general
@@ -274,7 +277,7 @@ class Job:
     RevGAT = config.buildRevDict(GAT)     # RevGAT[hash] = aperturename
     RevGAMT = config.buildRevDict(GAMT)   # RevGAMT[hash] = aperturemacroname
 
-    print 'Reading data from %s ...' % fullname
+    print 'Parsing Gerber file %s ...' % fullname
 
     fid = file(fullname, 'rt')
     currtool = None
@@ -312,6 +315,7 @@ class Job:
     # we use the following Boolean flag as well as the isLastShorthand flag during parsing
     # to manually insert the point X000000Y00000 into the command stream.
     firstFlash = True
+    lineNumber = 0
 
     # Number parser instance, this contains our unit, our format and our format options
     noParser = NumberParser()
@@ -320,7 +324,7 @@ class Job:
     for line in fid:
       # Get rid of CR characters (0x0D) and leading/trailing blanks
       line = string.replace(line, '\x0D', '').strip()
-      
+
       # Check if file is in imperial units
       match = measunit_pat.match(line)
       if match:
@@ -333,7 +337,7 @@ class Job:
           noParser.setUnit(inch)
           noParserAP.setUnit(inch)
         continue
-      
+
       # RS-274X statement? If so, echo it. Currently, only the "LP" statement is expected
       # (from Protel, of course). These will be distinguished from D-code and G-code
       # commands by the fact that the first character of the string is '%'.
@@ -341,7 +345,7 @@ class Job:
       if match:
         self.commands[layername].append(line)
         continue
-
+        
       # See if this is an aperture definition, and if so, map it.
       match = apdef_pat.match(line)
       if match:
@@ -369,11 +373,11 @@ class Job:
       if line[:7]=='%AMOC8*':
         continue
 
-# DipTrace specific fixes, but could be emitted by any CAD program. They are Standard Gerber RS-274X
+    # DipTrace specific fixes, but could be emitted by any CAD program. They are Standard Gerber RS-274X
       if line[:3] == '%SF': # scale factor - we will ignore it
         print 'Scale factor parameter ignored: ' + line
         continue
-# end basic diptrace fixes
+    # end basic diptrace fixes
 
       # See if this is an aperture macro definition, and if so, map it.
       M = amacro.parseApertureMacro(line,fid)
@@ -481,8 +485,8 @@ class Job:
         if match:
           currtool = match.group(1)
 
-# Diptrace hack
-# There is a D2* command in board outlines. I believe this should be D02. Let's change it then when it occurs:
+          # Diptrace hack
+          # There is a D2* command in board outlines. I believe this should be D02. Let's change it then when it occurs:
           if (currtool == 'D1'):
             currtool = 'D01'
           if (currtool == 'D2'):
@@ -508,7 +512,7 @@ class Job:
 
           # Map it using our translation table
           if not self.apxlat[layername].has_key(currtool):
-            raise RuntimeError, 'File %s has tool change command "%s" with no corresponding translation' % (fullname, currtool)
+            raise RuntimeError, 'File %s has tool change command "%s" with no corresponding translation (in %s)' % (fullname, currtool, sub_line)
 
           currtool = self.apxlat[layername][currtool]
 
@@ -523,56 +527,67 @@ class Job:
           continue
 
         # Is it a simple draw command?
-        I = J = None  # For circular interpolation drawing commands
-        match = drawXY_pat.match(sub_line)
-        isLastShorthand = False    # By default assume we don't make use of last_x and last_y
+        I = J = None  # For circular interpolation drawing commands, if not specified it defaults to 0 (set to none if not a circular interpolation)
+        match = drawXYf_pat.match(sub_line)
+        isLastShorthand = False     # By default assume we don't make use of last_x and last_y
+
         if match:
-          x, y, d = map(__builtin__.int, match.groups())
-          x = noParser.parse(match.group(1))
-          y = noParser.parse(match.group(2))
-          d = int(match.group(3))
-        else:
-          match = drawX_pat.match(sub_line)
-          if match:
-            x = noParser.parse(match.group(1))
-            y = last_y
-            d = int(match.group(2))
+          #x, y, d = map(__builtin__.int, match.groups())
+          x_, y_, d_ = match.groups()
+
+          if x_ is None:
+            x = last_x
             isLastShorthand = True  # Indicate we're making use of last_x/last_y
           else:
-            match = drawY_pat.match(sub_line)
-            if match:
-              x = last_x
-              y = noParser.parse(match.group(1))
-              d = int(match.group(2))
-              isLastShorthand = True  # Indicate we're making use of last_x/last_y
+            x = noParser.parse(x_)
+
+          if y_ is None:
+            y = last_y
+            isLastShorthand = True  # Indicate we're making use of last_x/last_y
+          else:
+            y = noParser.parse(y_)
+
+          if d_ is None:
+            d = last_d
+          else:
+            d = int(d_)
+
+          # At least X or Y should be there
+          if x_ is None and y_ is None:
+            match = None  # Make the match failed
+
 
         # Maybe it's a circular interpolation draw command with IJ components
         if match is None:
-          match = cdrawXY_pat.match(sub_line)
+          match = cdrawXYf_pat.match(sub_line)
           if match:
-            x = noParser.parse(match.group(1))
-            y = noParser.parse(match.group(2))
-            I = noParser.parse(match.group(3))
-            J = noParser.parse(match.group(4))
-            d = int(match.group(5))
-          else:
-            match = cdrawX_pat.match(sub_line)
-            if match:
-              x = noParser.parse(match.group(1))
-              y = last_y
-              I = noParser.parse(match.group(2))
-              J = noParser.parse(match.group(3))
-              d = int(match.group(4))
+            x_, y_, I_, J_, d_ = match.groups()
+            if x_ is None:
+              x = last_x
               isLastShorthand = True  # Indicate we're making use of last_x/last_y
             else:
-              match = cdrawY_pat.match(sub_line)
-              if match:
-                x = last_x
-                y = noParser.parse(match.group(1))
-                I = noParser.parse(match.group(2))
-                J = noParser.parse(match.group(3))
-                d = int(match.group(4))
-                isLastShorthand = True  # Indicate we're making use of last_x/last_y
+              x = noParser.parse(x_)
+
+            if y_ is None:
+              y = last_y
+              isLastShorthand = True  # Indicate we're making use of last_x/last_y
+            else:
+              y = noParser.parse(y_)
+
+            if I_ is None:
+              I = 0   # 0 if not specified (Gerber spec 2017.03)
+            else:
+              I = noParser.parse(I_)
+
+            if J_ is None:
+              J = 0   # 0 if not specified (Gerber spec 2017.03)
+            else:
+              J = noParser.parse(J_)
+
+            if d_ is None:
+              d = last_d
+            else:
+              d = int(d_)
 
         if match:
           if currtool is None:
@@ -586,6 +601,7 @@ class Job:
           # flashes (e.g., Y with no X) will be scaled twice!
           last_x = x
           last_y = y
+          last_d = d
 
           # Corner case: if this is the first flash/draw and we are using shorthand (i.e., missing Xxxx
           # or Yxxxxx) then prepend the point X0000Y0000 into the commands as it is actually the starting
@@ -598,7 +614,7 @@ class Job:
               self.miny = min(self.miny,0*mm)
               self.maxy = max(self.maxy,0*mm)
 
-          if I is not None:
+          if I is not None and J is not None:
             self.commands[layername].append((x,y,I,J,d,circ_signed))
           else:
             self.commands[layername].append((x,y,d))
@@ -635,7 +651,8 @@ class Job:
       print self.commands[layername]
 
   def parseExcellon(self, fullname):
-    print 'Reading data from %s ...' % fullname
+    #print 'Reading data from %s ...' % fullname
+    print 'Parsing Excellon file %s ...' % fullname
 
     fid = file(fullname, 'rt')
     currtool = None
@@ -736,7 +753,6 @@ class Job:
         if self.xdiam.has_key(currtool):
           raise RuntimeError, "File %s defines tool %s more than once" % (fullname, currtool)
         self.xdiam[currtool] = diam
-        #print "Tool %s has diam %s" % (currtool, diam)
         continue
 
       # Parse M71 and M72 lines for unit conversion
@@ -756,12 +772,12 @@ class Job:
       if match:
         currtool = match.group(1)
 
+        if int(currtool[1:]) == 0:
+          continue
+
         # Canonicalize tool number because Protel (of course) sometimes specifies it
         # as T01 and sometimes as T1. We canonicalize to T01.
         currtool = 'T%02d' % int(currtool[1:])
-
-        if currtool == 'T00':
-          continue
 
         # Diameter will be obtained from embedded tool definition, local tool list or if not found, the global tool list
         try:
@@ -854,7 +870,7 @@ class Job:
     fid.write('X%07dY%07dD02*\n' % (X, Y))
     for cmd in self.commands[layername]:
       if type(cmd) is types.TupleType:
-        if len(cmd)==3:
+        if len(cmd) == 3:
           x, y, d = cmd
           x = formatNumber(x + DX, config.getUnit(), decimals)
           y = formatNumber(y + DY, config.getUnit(), decimals)
@@ -870,7 +886,7 @@ class Job:
         # It's an aperture change, G-code, or RS274-X command that begins with '%'. If
         # it's an aperture code, the aperture has already been translated
         # to the global aperture table during the parse phase.
-        if cmd[0]=='%':
+        if cmd[0] == '%':
           fid.write('%s\n' % cmd)  # The command already has a * in it (e.g., "%LPD*%")
         else:
           fid.write('%s*\n' % cmd)
@@ -879,13 +895,13 @@ class Job:
     "Find the tools, if any, with the given diameter in inches. There may be more than one!"
     L = []
     for tool, diam in self.xdiam.items():
-      if diam==diameter:
+      if diam == diameter:
         L.append(tool)
     return L
 
   def writeExcellon(self, fid, diameter, Xoff, Yoff):
     """Write out the data such that the lower-left corner of this job is at the given (X,Y) position, in inches
-
+    
     args:
       fid - output file
       diameter

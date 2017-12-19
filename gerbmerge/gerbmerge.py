@@ -30,6 +30,7 @@ import sys
 import os
 import getopt
 import re
+import zipfile
 
 import aptable
 import jobs
@@ -45,6 +46,7 @@ import schwartz
 import util
 import scoring
 import drillcluster
+import makestroke
 from units import *
 
 # make version info available when running as script
@@ -95,56 +97,62 @@ the board outline layer for each job.
 
 # changed these two writeGerberHeader files to take metric units (mm) into account:
 
-def writeGerberHeader22degrees(fid):
+def writeGerberHeaderCommon(fid):
+  integerDigits = config.Config['gerberinteger']
+  fractionalDigits = config.Config['gerberdecimals']
+
   if config.Config['measurementunits'] == 'inch':
+    # MOIN for inch, G70 is depreciated
     fid.write( \
-"""G75*
-G70*
-%OFA0B0*%
-%FSLAX25Y25*%
-%IPPOS*%
-%LPD*%
-%AMOC8*
-5,1,8,0,0,1.08239X$1,22.5*
-%
+"""G70*
+%MOIN*%
 """)
   else:    # assume mm - also remove eagleware hack for %AMOC8
+    # MOMM for inch, G71 is depreciated
     fid.write( \
-"""G75*
-G71*
+"""G71*
 %MOMM*%
-%OFA0B0*%
-%FSLAX53Y53*%
+""")
+
+  #
+  fid.write( \
+"""%OFA0B0*%
+%FSLAX{0:1d}{1:1d}Y{0:1d}{1:1d}*%
 %IPPOS*%
 %LPD*%
+""".format(integerDigits, fractionalDigits))
+
+
+def writeGerberHeader22degrees(fid):
+  writeGerberHeaderCommon(fid)
+
+  if config.Config['measurementunits'] == 'inch':
+    # eagleware hack for %AMOC8
+    fid.write( \
+"""%AMOC8*
+5,1,8,0,0,1.08239x$1,22.5*
+%
 """)
+  #else:    # assume mm - also remove eagleware hack for %AMOC8
 
 
 def writeGerberHeader0degrees(fid):
+  writeGerberHeaderCommon(fid)
+
   if config.Config['measurementunits'] == 'inch':
+    # eagleware hack for %AMOC8
     fid.write( \
-"""G75*
-G70*
-%OFA0B0*%
-%FSLAX25Y25*%
-%IPPOS*%
-%LPD*%
-%AMOC8*
-5,1,8,0,0,1.08239X$1,0.0*
+"""%AMOC8*
+5,1,8,0,0,1.08239x$1,0.0*
 %
 """)
-  else:    # assume mm - also remove eagleware hack for %AMOC8
-    fid.write( \
-"""G75*
-G71*
-%MOMM*%
-%OFA0B0*%
-%FSLAX53Y53*%
-%IPPOS*%
-%LPD*%
-""")
+  #else:    # assume mm - also remove eagleware hack for %AMOC8
 
-writeGerberHeader = writeGerberHeader22degrees
+
+#def writeGerberHeader(fid):
+#  writeGerberHeader22degrees(fid)
+
+
 
 def writeApertureMacros(fid, usedDict):
   keys = config.GAMT.keys()
@@ -175,13 +183,23 @@ def writeExcellonHeader(fid):
     fid.write("INCH,%s\n" % zerosDef)
   else: # metric - mm
     fid.write("METRIC,%s\n" % zerosDef)
+
+def writeExcellonEndHeader(fid):
   fid.write('%\n')
 
 def writeExcellonFooter(fid):
   fid.write('M30\n')
 
-def writeExcellonTool(fid, tool, size):
+
+def writeExcellonToolInformation(fid, tool, size):
   fid.write('%sC%f\n' % (tool, size.asNumber(config.getUnit())))
+  #size_str = '{0:f}'.format(size).lstrip('0').rstrip('0').rstrip('.')   # Remove trailing and leading zeros
+  #fid.write('{0}C{1}\n'.format(tool, size_str))
+
+def writeExcellonTool(fid, tool):
+  fid.write('{0}\n'.format(tool))
+
+
 
 def writeFiducials(fid, drawcode, OriginX, OriginY, MaxXExtent, MaxYExtent):
   """Place fiducials at arbitrary points. The FiducialPoints list in the config specifies
@@ -252,6 +270,9 @@ def writeCropMarks(fid, drawing_code, OriginX, OriginY, MaxXExtent, MaxYExtent):
   fid.write('X%07dY%07dD01*\n' % (fmtNumberGbr(x+cropW), fmtNumberGbr(y)))
 
 def disclaimer():
+  if (config.Config['skipdisclaimer'] > 0): # remove annoying disclaimer
+    return 
+
   print """
 ****************************************************
 *           R E A D    C A R E F U L L Y           *
@@ -364,6 +385,15 @@ def merge(opts, args, gui = None):
   # global aperture table and GAMT, the global aperture macro table.
   updateGUI("Reading job files...")
   config.parseConfigFile(args[0])
+
+  # Force all X and Y coordinates positive by adding absolute value of minimum X and Y
+  for name, job in config.Jobs.iteritems():
+    min_x, min_y = job.mincoordinates()
+    shift_x = shift_y = 0*m
+    if min_x < 0*m: shift_x = abs(min_x)
+    if min_y < 0*m: shift_y = abs(min_y)
+    if (shift_x > 0*m) or (shift_y > 0*m):
+      job.fixcoordinates( shift_x, shift_y )
 
   # Display job properties                                                                
   for job in config.Jobs.values():
@@ -536,11 +566,11 @@ def merge(opts, args, gui = None):
     
     if config.Config['scoringlinelayers'] and (layername in config.Config['scoringlinelayers']):
       apUsedDict[drawing_code_score]=None
-      
+
     if config.Config['cropmarklayers'] and (layername in config.Config['cropmarklayers']):
       apUsedDict[drawing_code_crop]=None
       
-    if config.Config['fiducialpoints']:      
+    if config.Config['fiducialpoints']:
       if ((layername=='*toplayer') or (layername=='*bottomlayer')):
         apUsedDict[drawing_code_fiducial_copper] = None
       elif ((layername=='*topsoldermask') or (layername=='*bottomsoldermask')):
@@ -557,6 +587,19 @@ def merge(opts, args, gui = None):
     #  if config.Config['cutlinelayers'] and (layername in config.Config['cutlinelayers']):
     #    fid.write('%s*\n' % drawing_code_cut)    # Choose drawing aperture
     #    row.writeCutLines(fid, drawing_code_cut, OriginX, OriginY, MaxXExtent, MaxYExtent)
+
+    # Write scorings in layer if needed
+    if config.Config['scoringlayers'] and (layername in config.Config['scoringlayers']):
+      # Write width-1 aperture to file
+      AP = aptable.Aperture(aptable.Circle, 'D10', 0.001)
+      AP.writeDef(fid)
+
+      # Choose drawing aperture D10
+      fid.write('D10*\n')
+
+      # Draw the scoring lines
+      scoring.writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent)
+
 
     # Finally, write actual flash data
     for job in Place.jobs:
@@ -705,6 +748,17 @@ def merge(opts, args, gui = None):
 
   writeExcellonHeader(fid)
 
+  for tool in Tools:
+    try:
+      size = config.GlobalToolMap[tool]
+    except:
+      raise RuntimeError, "INTERNAL ERROR: Tool code %s not found in global tool map" % tool
+      
+    writeExcellonToolInformation(fid, tool, size)
+
+  writeExcellonEndHeader(fid)
+
+
   # Ensure each one of our tools is represented in the tool list specified
   # by the user.
   for tool in Tools:
@@ -713,13 +767,46 @@ def merge(opts, args, gui = None):
     except:
       raise RuntimeError, "INTERNAL ERROR: Tool code %s not found in global tool map" % tool
       
-    writeExcellonTool(fid, tool, size)
+    writeExcellonTool(fid, tool)
 
+    #for row in Layout:
+    #  row.writeExcellon(fid, size)
     for job in Place.jobs:
         job.writeExcellon(fid, size)
   
   writeExcellonFooter(fid)
   fid.close()
+  
+
+
+  updateGUI("Zipping files...")
+
+  print 'Zipping files ...'
+
+  try:
+    zipfilename = config.ZipOutputFiles['zipfile']
+  except KeyError:
+    zipfilename = None
+  if zipfilename is not None:
+    zipCount = 0
+    # Override zip file
+    with zipfile.ZipFile(zipfilename, 'w') as zip:
+
+      for layername in config.ZipOutputFiles['layers']:
+        try:
+          fullname = config.MergeOutputFiles[layername]
+        except KeyError:
+          print '  Zipping layer {0} failed: layer is not in "MergeOutputFiles"'.format(layername)
+          continue
+
+        print '  Zipping %s ...' % fullname
+        zip.write(fullname)
+        zipCount = zipCount+1
+
+      OutputFiles.append(zipfilename)
+      print 'Zipped {0} files to {1}.'.format(zipCount, zipfilename)
+
+
   
   updateGUI("Closing files...")
 
@@ -734,6 +821,10 @@ def merge(opts, args, gui = None):
   drillhits = 0
   for tool in Tools:
     ToolStats[tool]=0
+    #for row in Layout:
+    #  hits = row.drillhits(config.GlobalToolMap[tool])
+    #  ToolStats[tool] += hits
+    #  drillhits += hits
     for job in Place.jobs:
       hits = job.drillhits(config.GlobalToolMap[tool])
       ToolStats[tool] += hits
