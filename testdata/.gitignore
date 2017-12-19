@@ -1,7 +1,8 @@
-DipTrace_Example/
 stertingen/export-*/
 olegart/*/merged/
 daniels/merge1.*
 daniels/merge2.*
 daniels/*.merge1.*
 daniels/*.merge2.*
+# I don't know whether I'm allowed to put the test in here, better ignore it.
+DipTrace_Example/
