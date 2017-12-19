@@ -43,7 +43,6 @@ import tilesearch1
 import tilesearch2
 import placement
 import schwartz
-import util
 import scoring
 import drillcluster
 import makestroke
@@ -212,15 +211,15 @@ def writeFiducials(fid, drawcode, OriginX, OriginY, MaxXExtent, MaxYExtent):
   fList = config.Config['fiducialpoints'].split(',')
   for i in range(0, len(fList), 2):
     x,y = float(fList[i]), float(fList[i+1])
-    if x>=0:
+    if x >= 0*m:
       x += OriginX
     else:
       x = MaxXExtent + x
-    if y>=0:
+    if y >= 0*m:
       y += OriginX
     else:
       y = MaxYExtent + y
-    fid.write('X%07dY%07dD03*\n' % (util.in2gerb(x), util.in2gerb(y)))
+    fid.write('X%07dY%07dD03*\n' % (fmtNumberGbr(x), fmtNumberGbr(y)))
 
 def writeCropMarks(fid, drawing_code, OriginX, OriginY, MaxXExtent, MaxYExtent):
   """Add corner crop marks on the given layer"""

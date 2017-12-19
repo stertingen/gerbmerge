@@ -17,7 +17,6 @@ import string
 
 import config
 import amacro
-import util
 from units import *
 from unum import Unum
 
@@ -64,24 +63,7 @@ class Aperture:
     this Rectangle aperture when flashed at center co-ordinates (X,Y)"""
     xm = self.dimx / 2
     ym = self.dimy / 2
-    
-    #dx = util.in2gerb(self.dimx)
-    #dy = util.in2gerb(self.dimy)
     return (X-xm, Y-ym, X+xm, Y+ym)
-
-    #if dx & 1:    # Odd-sized: X extents are (dx+1)/2 on the left and (dx-1)/2 on the right
-    #  xm = (dx+1)/2
-    #  xp = xm-1
-    #else:         # Even-sized: X extents are X-dx/2 and X+dx/2
-    #  xm = xp = dx/2
-
-    #if dy & 1:    # Odd-sized: Y extents are (dy+1)/2 below and (dy-1)/2 above
-    #  ym = (dy+1)/2
-    #  yp = ym-1
-    #else:         # Even-sized: Y extents are Y-dy/2 and Y+dy/2
-    #  ym = yp = dy/2
-
-    #return (X-xm, Y-ym, X+xp, Y+yp)
     
   def getAdjusted(self, minimum):
     """

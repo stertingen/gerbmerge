@@ -10,7 +10,6 @@ http://ruggedcircuits.com/gerbmerge
 """
 
 import config
-import util
 import makestroke
 from units import *
 

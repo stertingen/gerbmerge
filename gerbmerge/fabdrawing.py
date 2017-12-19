@@ -14,7 +14,6 @@ import string
 
 import config
 import makestroke
-import util
 from units import *
 
 def writeDrillHits(fid, Place, Tools):  

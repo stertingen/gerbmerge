@@ -28,7 +28,6 @@ import config
 import makestroke
 import amacro
 import geometry
-import util
 from units import *
 
 # Parsing Gerber/Excellon files is currently very brittle. A more robust
@@ -1264,10 +1263,10 @@ class JobLayout:
         BL = (BL[0], BL[1]+2*radius)
         BR = (BR[0], BR[1]+2*radius)
 
-      BL = (util.in2gerb(BL[0]), util.in2gerb(BL[1]))
-      TL = (util.in2gerb(TL[0]), util.in2gerb(TL[1]))
-      TR = (util.in2gerb(TR[0]), util.in2gerb(TR[1]))
-      BR = (util.in2gerb(BR[0]), util.in2gerb(BR[1]))
+      BL = (fmtNumberGbr(BL[0]), fmtNumberGbr(BL[1]))
+      TL = (fmtNumberGbr(TL[0]), fmtNumberGbr(TL[1]))
+      TR = (fmtNumberGbr(TR[0]), fmtNumberGbr(TR[1]))
+      BR = (fmtNumberGbr(BR[0]), fmtNumberGbr(BR[1]))
 
       # The "if 1 or ..." construct draws all four sides of the job. By
       # removing the 1 from the expression, only the sides that do not
