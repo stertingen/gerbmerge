@@ -165,7 +165,9 @@ def writeGerberFooter(fid):
 
 def writeExcellonHeader(fid):
   fid.write("M48\n")
-  if config.Config['excellonleadingzeros']:
+  if config.Config['excellonleadingzeros'] and config.Config['excellonleadingzeros'] == 'diptrace':
+    zerosDef = "0000.00"
+  elif config.Config['excellonleadingzeros']:
     zerosDef = "LZ"
   else:
     zerosDef = "TZ"
@@ -449,6 +451,12 @@ def merge(opts, args, gui = None):
   drawing_code_cut = aptable.findInApertureTable(AP)
   if drawing_code_cut is None:
     drawing_code_cut = aptable.addToApertureTable(AP)
+ 
+  # For score lines
+  AP = aptable.Aperture(aptable.Circle, 'D??', config.Config['scoringlinewidth'])
+  drawing_code_score = aptable.findInApertureTable(AP)
+  if drawing_code_score is None:
+    drawing_code_score = aptable.addToApertureTable(AP)
 
   # For crop marks
   AP = aptable.Aperture(aptable.Circle, 'D??', config.getConfigLength('cropmarkwidth'))
@@ -529,11 +537,14 @@ def merge(opts, args, gui = None):
 
     if config.Config['cutlinelayers'] and (layername in config.Config['cutlinelayers']):
       apUsedDict[drawing_code_cut]=None
-
+    
+    if config.Config['scoringlinelayers'] and (layername in config.Config['scoringlinelayers']):
+      apUsedDict[drawing_code_score]=None
+      
     if config.Config['cropmarklayers'] and (layername in config.Config['cropmarklayers']):
       apUsedDict[drawing_code_crop]=None
       
-    if config.Config['fiducialpoints']:
+    if config.Config['fiducialpoints']:      
       if ((layername=='*toplayer') or (layername=='*bottomlayer')):
         apUsedDict[drawing_code_fiducial_copper] = None
       elif ((layername=='*topsoldermask') or (layername=='*bottomsoldermask')):
@@ -562,11 +573,21 @@ def merge(opts, args, gui = None):
         #print "writing drawcode_cut: %s" % drawing_code_cut
         job.writeCutLines(fid, drawing_code_cut, OriginX, OriginY, MaxXExtent, MaxYExtent)
 
+    # Draw the scoring lines
+    if config.Config['scoringlinelayers'] and layername in config.Config['scoringlinelayers']:
+      fid.write('%s*\n' % drawing_code_score)    # Choose scoring aperture
+      scoring.writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent)
+
     if config.Config['cropmarklayers']:
       if layername in config.Config['cropmarklayers']:
         writeCropMarks(fid, drawing_code_crop, OriginX, OriginY, MaxXExtent, MaxYExtent)
 
     if config.Config['fiducialpoints']:
+      # If we are generating fiducials along the score lines, 
+      #  and we have not yet done so, we need to generate those now, pass in None as the file
+      #  to prevent it actually writing out scoring lines and just generate the fiducials
+      if config.Config['fiducialpoints'] == 'scoring':
+        scoring.writeScoring(None, Place, OriginX, OriginY, MaxXExtent, MaxYExtent)
       if ((layername=='*toplayer') or (layername=='*bottomlayer')):
         writeFiducials(fid, drawing_code_fiducial_copper, OriginX, OriginY, MaxXExtent, MaxYExtent)
       elif ((layername=='*topsoldermask') or (layername=='*bottomsoldermask')):

@@ -1,13 +1,17 @@
 # GerbMerge
 
+## Warning!
+
+Don't use version 1.10 in production environments. It is currently highly broken! Use the 1.9.5 or 1.9.4 version, which is considered kind of stable. (Branch 1.9.5-dev)
+
 ## What's New
 
-In release 1.10.0
+In release 1.10.0 (mostly broken!)
 
 * Auto-detect if a file is in metric or imperial units and convert measurements to target unit
 * Better KiCAD support
 
-In release 1.9.5
+In release 1.9.5 (stable-ish version, use this one!)
 
 * Set interpreter to python2 for Archlinux compatibility
 

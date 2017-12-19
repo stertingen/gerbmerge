@@ -276,7 +276,7 @@ def writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent):
     # 2.5 limits.
     x,y,X,Y = [round(val,5) for val in [x,y,X,Y]]
 
-    if 0: # Scoring lines go all the way across the panel now
+    if config.Config['scoringstyle'] and config.Config['scoringstyle'] == 'surround' : # Scoring lines go all the way across the panel now
       addHorizontalLine(Lines, x, X, Y, extents)   # above job
       addVerticalLine(Lines, X, y, Y, extents)     # to the right of job
       addHorizontalLine(Lines, x, X, y, extents)   # below job
@@ -293,9 +293,53 @@ def writeScoring(fid, Place, OriginX, OriginY, MaxXExtent, MaxYExtent):
   #for line in Lines:
   #  print [round(x,3) for x in line]
 
-  # Write 'em out
-  for line in Lines:
-    makestroke.drawPolyline(fid, [(util.in2gerb(line[0]),util.in2gerb(line[1])), \
-                                  (util.in2gerb(line[2]),util.in2gerb(line[3]))], 0, 0)
+  # Write 'em out  
+  if config.Config['fiducialpoints'] and config.Config['fiducialpoints'] == 'scoring':
+    # If fiducialpoints == 'scoring' rewrite it now to mark out the scoring lines
+    newFiducuals = [ ]    
+    
+    for line in Lines:
+      # Fiducials at 10% in from each end of the line
+      if isHorizontal(line):
+        offset = (line[2]-line[0])*0.1
+        newFiducuals.append(line[0]+offset)
+        newFiducuals.append(line[1])
+        newFiducuals.append(line[2]-offset)
+        newFiducuals.append(line[3])
+      else:
+        offset = (line[3]-line[1])*0.1
+        newFiducuals.append(line[0])
+        newFiducuals.append(line[1]+offset)
+        newFiducuals.append(line[2])
+        newFiducuals.append(line[3]-offset)
+      
+      # Fiducials at the end of each line, unless it's a board edge
+      #  (in other words, line intersections)
+      # I think this makes it a bit cluttered
+      if 0:
+        if not( line[0] == OriginX or line[1] == OriginY or line[0] == MaxXExtent or line[1] == MaxYExtent):
+          newFiducuals.append(line[0])
+          newFiducuals.append(line[1])
+          
+        if not( line[2] == OriginX or line[3] == OriginY or line[2] == MaxXExtent or line[3] == MaxYExtent):
+          newFiducuals.append(line[2])
+          newFiducuals.append(line[3])
+      
+      # Fiducials at 50% of each line  
+      if isHorizontal(line):
+        offset = (line[2]-line[0])*0.5
+        newFiducuals.append(line[0]+offset)
+        newFiducuals.append(line[1])
+      else:
+        offset = (line[3]-line[1])*0.5
+        newFiducuals.append(line[0])
+        newFiducuals.append(line[1]+offset)
+      
+    config.Config['fiducialpoints'] = ','.join(map(str, newFiducuals))
+  
+  if fid != None:
+    for line in Lines:
+      makestroke.drawPolyline(fid, [(util.in2gerb(line[0]),util.in2gerb(line[1])), \
+                                    (util.in2gerb(line[2]),util.in2gerb(line[3]))], 0, 0)
 
 # vim: expandtab ts=2 sw=2 ai syntax=python
