@@ -62,7 +62,7 @@ In general, assignments are local to the section in which they reside, i.e., the
     BoardOutline = %(prefix)s/io.bor
     Drills       = %(prefix)s/io.xln
 
-Have a look at the sample configuration files [<tt>layout1.cfg</tt>](layout1.cfg) and [<tt>layout2.cfg</tt>](layout2.cfg) for a quick overview of this file's syntax.
+Have a look at the sample configuration files [<tt>layout1.cfg</tt>](example/layout1.cfg) and [<tt>layout2.cfg</tt>](example/layout2.cfg) for a quick overview of this file's syntax.
 
 ## Operating Parameters
 
@@ -367,7 +367,7 @@ Job names (in square brackets) are fairly arbitrary and need not correspond to a
 
 Each assignment statement assigns a file name to a layer name. As mentioned above, the layer names 'boardoutline' and 'drills' are reserved and required. The optional 'toollist' layer is not an actual layer but an assignment that indicates the tool list in effect for this job. All other layer names are up to you and must begin with an asterisk '*'.
 
-Make good use of variable substitutions (see the sample [<tt>layout1.cfg</tt>](layout1.cfg) and [<tt>layout2.cfg</tt>](layout2.cfg) files) to avoid typing the same pathname over and over.
+Make good use of variable substitutions (see the sample [<tt>layout1.cfg</tt>](example/layout1.cfg) and [<tt>layout2.cfg</tt>](example/layout2.cfg) files) to avoid typing the same pathname over and over.
 
 In addition to specifying board layers, each job description can also have job-specific parameter assignments:
 
