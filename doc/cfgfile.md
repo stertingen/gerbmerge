@@ -14,7 +14,7 @@ Note that the configuration file does not specify layout of jobs on the panel. T
 
 The rest of this document has a lot of information and it's easy to get overwhelmed. Users of GerbMerge complain that the configuration file is the biggest hurdle to overcome in using the program.
 
-Don't panic. Start with a [sample configuration file](html/layout2.cfg) and modify it for your own jobs. The comments in the sample file will guide you through the process.
+Don't panic. Start with a [sample configuration file](example/layout2.cfg) and modify it for your own jobs. The comments in the sample file will guide you through the process.
 
 ## Syntax Notes
 
@@ -231,7 +231,7 @@ The width of the scoring line when drawn in the Scoring Line Layers, this does n
 
 These parameters set the dimensions of the board manufacturer's panels. An error message will be displayed if the panelized job exceeds these dimensions. You can change these settings to match the panel size of your board manufacturer, if you know it.
 
-For [automatic placement](autosearch.html), the panel size defined by these settings constraint the random placements such that only placements that would fit on the panel are considered.
+For [automatic placement](autosearch.md), the panel size defined by these settings constraint the random placements such that only placements that would fit on the panel are considered.
 
 </dd>
 
@@ -277,7 +277,7 @@ This optional parameter indicates the width of the line used to draw crop marks.
 
 This parameter may be set to either 0 or 1. When set to 0, all jobs must have the same layer names. This is the most common case. This parameter guards against misspelling of layer names and having them mistakenly placed on a different layer.
 
-Some jobs, however, will have fewer or more layers. For example, mixing jobs that do and do not have surface-mount components may mean that some jobs will have solder mask layers and some will not. Setting <tt>AllowMissingLayers</tt> to 1 allows you to panelize such job mixtures. Take care, however, to [inspect the output carefully](index.html#Verifying) in this case to catch layer-name surprises.
+Some jobs, however, will have fewer or more layers. For example, mixing jobs that do and do not have surface-mount components may mean that some jobs will have solder mask layers and some will not. Setting <tt>AllowMissingLayers</tt> to 1 allows you to panelize such job mixtures. Take care, however, to [inspect the output carefully](../README.md#Verifying) in this case to catch layer-name surprises.
 
 </dd>
 

@@ -1,7 +1,7 @@
 <a name="Introduction"></a>
 ## Introduction
 
-As an alternative to manual placement, either using the [layout file](layoutfile.html) approach or using the <tt>--place-file</tt> command-line option, GerbMerge can automatically try to find the best arrangement of jobs on a panel that minimizes the total panel area. Using automatic placement can save you time since you don't have to construct and experiment with a layout file. The tradeoff, however, is that automatic placement may take a long time to execute, and for panels with many, small jobs, the run time may be prohibitive. On the other hand, experience suggests that good results can be obtained in just a few minutes, even when GerbMerge is not allowed to search all possibilities.
+As an alternative to manual placement, either using the [layout file](layoutfile.md) approach or using the <tt>--place-file</tt> command-line option, GerbMerge can automatically try to find the best arrangement of jobs on a panel that minimizes the total panel area. Using automatic placement can save you time since you don't have to construct and experiment with a layout file. The tradeoff, however, is that automatic placement may take a long time to execute, and for panels with many, small jobs, the run time may be prohibitive. On the other hand, experience suggests that good results can be obtained in just a few minutes, even when GerbMerge is not allowed to search all possibilities.
 
 <a name="Random"></a>
 ## Randomized Search
@@ -39,7 +39,7 @@ The exhaustive search mode is invoked as follows:
 
     gerbmerge --full-search file.cfg
 
-You can stop the search at any time by pressing Ctrl-C. The best placement found so far will be used for panelization and saved in the placement file specified by the <tt>Placement</tt> value in the <tt>[MergeOutputFiles]</tt> section of the [configuration file](cfgfile.html).
+You can stop the search at any time by pressing Ctrl-C. The best placement found so far will be used for panelization and saved in the placement file specified by the <tt>Placement</tt> value in the <tt>[MergeOutputFiles]</tt> section of the [configuration file](cfgfile.md).
 
 <a name="Repeats"></a>
 ## Multiple Instances
