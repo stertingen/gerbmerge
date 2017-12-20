@@ -1,6 +1,0 @@
-Todo list
-
-- amacro.py: test multi-line macros, name groups in regexp for more readability
-
-- finish: option to specify gerber input/output format with or without leading zeros
-- name regex groups

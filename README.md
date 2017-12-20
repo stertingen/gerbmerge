@@ -340,14 +340,17 @@ GerbMerge comes with ABSOLUTELY NO WARRANTY. This is free software licensed unde
 
 ## To Do
 
-1.  Proper metric/inch support: parse files with arbitrary units, output files with units specified in the config
-2.  Accept outputs from more CAD programs
-3.  A graphical interface for interactive placement
-4.  Better reporting of parse errors in the layout and configuration files
-5.  Implement simple primitive for panelizing a single job in an array
-6.  More intelligent placement algorithms, possibly based on the fabric cutting problem.
-7.  Accept aperture macro parameters and operators
-8.  HPGL output for miling
+1. Proper metric/inch support: parse files with arbitrary units, output files with units specified in the config
+2. Accept outputs from more CAD programs
+3. A graphical interface for interactive placement
+4. Better reporting of parse errors in the layout and configuration files
+5. Implement simple primitive for panelizing a single job in an array
+6. More intelligent placement algorithms, possibly based on the fabric cutting problem.
+7. Accept aperture macro parameters and operators
+8. HPGL output for miling
+9. amacro.py: test multi-line macros, name groups in regexp for more readability
+10. finish: option to specify gerber input/output format with or without leading zeros
+11. name regex groups
 
 ## Credits
 
