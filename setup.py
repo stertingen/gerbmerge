@@ -23,9 +23,7 @@ if sys.version_info >= (3,0,0):
 if 0:
   for key,val in distutils.sysconfig.get_config_vars().items():
     print key
-    print '***********************'
     print '  ', val
-    print
     print
 
   sys.exit(0)
@@ -98,7 +96,7 @@ URL below.
                       (os.path.join(DestDir,'testdata'), SampleFiles),
                       (os.path.join(DestDir,'doc'), DocFiles),
                       (BinDir, BinFiles) ],
-       install_requires = ['simpleparse']
+       install_requires = ['simpleparse', 'unum']
 )
 
 do_fix_perms = 0
