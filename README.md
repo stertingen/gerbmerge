@@ -2,17 +2,23 @@
 
 ## Warning!
 
-Don't use version 1.10 in production environments. It is currently highly broken! Use the 1.9.5 or 1.9.4 version, which is considered kind of stable. (Branch 1.9.5-dev)
+Don't use version 1.10 in production environments. It is currently highly broken! Use the 1.9.5 or 1.9.4 version, which are considered stable. (Tag v1.9.5)
 
 ## What's New
 
-In release 1.10.0 (mostly broken!)
+In release 1.10.0 (Future)
 
-* Auto-detect if a file is in metric or imperial units and convert measurements to target unit
-* Better KiCAD support
-* Some scoring features
+* New unit system:
+    * Auto-detect if a file is in metric or imperial units and convert measurements to target unit
+    * Usage board files in arbitrary unit systems is now possible
+* Better KiCAD and DesignSpark support
+* Set skipdisclaimer from config file
+* More precise Excellon and Gerber number formatting options
+* Improved output to scoring file
+* Added zip output file (Remove feature?)
+* Added DipTrace-style Excellon format output
 
-In release 1.9.5 (stable-ish version, use this one!)
+In release 1.9.5
 
 * Set interpreter to python2 for Archlinux compatibility
 
@@ -360,11 +366,147 @@ Thanks to Joe Pighetti for making me start writing this program, and to the Gran
 
 Thanks to Matt Kavalauskas for identifying Eagle's annulus and thermal macros and supporting the development of the aperture macro code.
 
+## History
+
+Reconstructed using [Stefan Tauner's fork](http://www.gedasymbols.org/user/stefan_tauner/tools/gerbmerge/doc/) and some Git history.
+
+Version 1.9.4 -- January 31, 2016
+
+* Metric support fixed and tested with Diptrace
+* Support for Cygwin environment
+* Fixed Windows installation
+* Some Gerber parsing fixes
+
+Version 1.9 -- April 29, 2013
+
+* Added metric support
+* Added default timeout for random tile placement
+* Added DipTrace support
+* Use boardoutline files (when present) to build cutlines in silkscreen layers instead of the default calculated algorithm. This change permits non-rectangular board outlines.
+
+Version 1.8
+
+* Released under more recent GPL v3 license
+* Summary statistics prints out smallest drill tool diameter
+* Added [<tt>FiducialPoints</tt>](doc/cfgfile.md#FiducialPoints), [<tt>FiducialCopperDiameter</tt>](doc/cfgfile.md#FiducialCopperDiameter), and [<tt>FiducialMaskDiameter</tt>](doc/cfgfile.md#FiducialMaskDiameter) configuration options
+* Added option to write fiducials to final panel
+* Scoring lines now go all the way across a panel
+
+Version 1.7
+
+* Added a new command-line option <tt>--search-timeout</tt> to time-limit the automatic placement process.
+* Added preliminary support for a GUI controller interface.
+
+Version 1.6 -- October 5, 2008
+
+* A new configuration option was introduced (MinimumFeatureSize) that implements automatic feature thickening to some minimum dimension. This is intended to automatically thicken silkscreen layers.
+* Negative X/Y co-ordinates in input files are now supported.
+* Layout files (i.e., DEF files) now support job names that have hyphens in them, and names that start with numbers.
+* Job names are case-insensitive in layout files. You should not have two job names specified in the configuration file that differ only in case.
+
+Version 1.5 -- September 15, 2008
+
+* Added DrillClusterTolerance configuration option to control drill clustering. The TOLERANCE global variable in drillcluster.py was removed.
+* Added support for 90, 180, and 270 degree board rotations in manual layout. Automatic placement still only tries board rotations of 90 degrees.
+* Fixed bug that prevented the placement file approach from working when there were rotated jobs.
+
+Version 1.4 -- September 10, 2008
+
+* Drills can now be optionally clustered to reduce the total number of drills in the merged job. Cluster tolerance is set by adjusting TOLERANCE in drillcluster.py.
+
+Version 1.3 -- October 31, 2006
+
+* Gerber files are now generated and represented in 2.5 format.
+* Bug fix in generating scoring lines.
+
+Version 1.2 -- September 16, 2006
+
+* Added support for Protel-generated Gerber/Excellon files.
+* Ensured Excellon tool numbers always have at least two digits (e.g., 'T01' instead of 'T1').
+
+Version 1.1 -- November 10, 2005
+
+* Added ScoringFile option.
+
+Version 1.0 -- August 20, 2005
+
+* The configuration file now has a MergeOutputFiles section allowing user-configurable output file names.
+* The OutlineLayer config option is now called OutlineLayerFile.
+* The FabricationDrawing config option is now called FabricationDrawingFile.
+* The sample configuration files have much more documentation.
+* Changed the default XSpacing/YSpacing values to 0.125".
+* BUG: Unspecified cut line/crop line/etc. widths ended up being 0-mil lines instead of the default 10-mil lines.
+* The default value of ExcellonDecimals is now 4 instead of 3.
+* The internal drill location representation is now in 2.4 instead of 2.3 format.
+* Aperture codes with more than 2 digits are accepted as input.
+* The initial exposure-off flash command in each layer has been moved to be at a non-negative co-ordinate.
+* Better documentation of configuration file format syntax.
+* Fewer rotated aperture macros are generated, leading to smaller Gerber output files.
+* Gerber files now only write out aperture and macro definitions actually used in that file, leading to slightly smaller Gerber output files.
+* Python 2.3 is now required.
+* BUG: --place-file did not work when job names had uppercase characters.
+* Drills that occur outside of the board outline (as set by the BoardOutline layer in the configuration file) are deleted, unless --no-trim-excellon is specified.
+* A new configuration option ExcellonLeadingZeros causes leading zeros to be written to the merged Excellon file.
+* New configuration options LeftMargin, TopMargin, RightMargin, BottomMargin were introduced.
+* Jobs are now trimmed to the extents of the board outline (as set by the BoardOutline layer in the configuration file) unless --no-trim-gerber is specified.
+
+Version 0.9 -- August 12, 2005
+
+* Added aperture macro support
+* Excellon files are now generated in 2.4 format
+* Job-specific ExcellonDecimals parameter was added
+
+Version 0.8 -- October 16, 2004
+
+* Added new OutlineLayer configuration option
+
+Version 0.7 -- August 27, 2004
+
+* Added support for automatic placement.
+* Added support for manual placement from a text file.
+* Added new PanelWidth and PanelHeight global configuration options.
+* Added new --random-search, --full-search, --place-file, and --rs-fsjobs command-line options.
+* Added new Repeat configuration option to support automatic placement.
+* Every successful run of GerbMerge now writes the final job placement in a merged.placement.txt file.
+* Fixed a bug that prevented some drills from appearing in the merged output files when a job had a tool list with different tool names but the same drill sizes.
+
+Version 0.6 -- April 26, 2004
+
+* Added support for the new Excellon format of Eagle version 4.11r2.
+* Added support for [PCB](http://www.sourceforge.net/projects/pcb) in the RS274X and Excellon parser.
+* The global [ToolList](doc/cfgfile.md#Parameters) file is now optional. Each job can specify its own tool list, or the tool sizes can be deduced from Excellon files which have tool size information. The global ToolList option is still used to specify tool sizes for jobs that have none of the above.
+* Added new CutLineWidth and CropMarkWidth options.
+* Backwards-incompatibly removed the Spacing option and replaced it with XSpacing and YSpacing.
+
+Version 0.5 -- March 1, 2004
+
+* Added support for Orcad in the RS274X parser.
+* Added ExcellonDecimals configuration file option, to support Excellon files generated by Orcad.
+* The tool list file format was relaxed a bit to allow more whitespace and to support mils.
+
+Version 0.4 -- November 26, 2003
+
+* Fixed an error that occured when more than 99 apertures were present in the merged files. All apertures above D99 were ignored and did not appear in the merged output
+* All carriage-return (0x0D) characters are stripped from input files allowing DOS-generated input files to be processed on a Unix system
+* Added 7 more glyphs to the drill symbols for the fabrication drawing, now allowing up to 26 different tool symbols
+
+Version 0.3 -- October 23, 2003
+
+* Added support for Eagle 4.11
+
+Version 0.2 -- May 16, 2003
+
+* Added support for fabrication drawings
+
+Version 0.1 -- March 4, 2003
+
+* Initial release
+
 * * *
 
 Portions (versoin 1.9.4 & prior): Copyright © 2016 [Unwired Devices LLC](http://www.unwireddevices.com). All Rights Reserved.
 
 Portions (version 1.9.3 & prior): Copyright © 2013 [ProvideYourOwn.com](http://provideyourown.com). All Rights Reserved.
 
-Portions (version 1.8 & prior): Copyright © 2003-2011, Copyright by [Rugged Circuits LLC](http://ruggedcircuits.com); All Rights Reserved. mailto: [support@ruggedcircuits.com](mailto:support@ruggedcircuits.com?subject=GerbMerge)
+Portions (version 1.8 & prior): Copyright © 2003-2011, Copyright by [Rugged Circuits LLC](http://ruggedcircuits.com); All Rights Reserved. Mail: [support@ruggedcircuits.com](mailto:support@ruggedcircuits.com?subject=GerbMerge)
 

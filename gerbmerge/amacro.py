@@ -20,7 +20,6 @@ import copy
 
 import config
 
-#_macro_pat = re.compile(r'^%AM([^*]+)\*$')
 _macro_pat = re.compile(r'^%AM([^*]+)\*(?:(?:(0[^*]+)\*)?([^*]+)\*%)?$')
 
 # This list stores the expected types of parameters for each primitive type
