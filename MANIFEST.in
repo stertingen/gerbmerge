@@ -1,4 +1,4 @@
-include setup.cfg
-include setup.py
 include LICENSE
+include README.md
+recursive-include doc *.md *.cfg *.def *.jpg *.png
 recursive-include gerbmerge *.py

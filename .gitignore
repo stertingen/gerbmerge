@@ -1,6 +1,7 @@
-# distutils build output
+# distutils/setuptools build output
 *.pyc
 build/
 dist/
 gerbmerge-*.*/
 MANIFEST
+gerbmerge.egg-info/
