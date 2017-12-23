@@ -17,6 +17,7 @@ In release 1.10.0 (Future)
 * Improved output to scoring file
 * Added zip output file (Remove feature?)
 * Added DipTrace-style Excellon format output
+* Moved setup.py to setuptools for easier installation
 
 In release 1.9.5
 
@@ -72,84 +73,25 @@ GerbMerge is written in pure [Python](http://www.python.org). It depends upon th
 * [SimpleParse](http://simpleparse.sourceforge.net) version 2.1.0 or later
 * [Unum](http://home.scarlet.be/be052320/Unum.html) version 4.1.0 or later
 
-All of the above packages come with easy installation programs for both Windows, Mac OS X, and Linux. ## Automatic Installation with PIP This repository can generate a tarball for installation with PIP. In the repository, run:
+All of the above packages come with easy installation programs for Windows, Mac OS X, and Linux.
 
-    $ python setup.py sdist
-    $ pip install dist/gerbmerge-1.10.0.tar.gz
-    
-PIP will automatically resolve the dependencies. `-1.10.0` will change with the current tool version. To easily run the installed package without looking up your python path, use python's "run module as script" feature: ``` $ python -m gerbmerge <args>```</args>
+## Install
 
-## Installation
-
-### Windows / Cygwin
-
-** This guide may be outdated! **
-
-Install Cygwin with _python_, _python-setuptools_, and _gcc_ packages (gcc is needed for simpleparse).
-Launch Cygwin shell and install _pip_, then _simpleparse_:
-
-    easy_install-x.y pip
-    pip install simpleparse
-
-(x.y is the current Python version)
-
-Download and unpack _gerbmerge_ sources, navigate to its folder in Cygwin shell and run:
-
-    python setup.py sdist
-    pip install dist/gerbmerge-1.9.4.tar.gz
-
-To uninstall gerbmerge, launch Cygwin shell and run:
-
-    pip uninstall gerbmerge
-
-### Windows (native)
-
-** This guide may be outdated! **
-
-[Download](https://www.python.org/downloads/release/python-2711/) and install Python-2.7, _pip_ will be installed too.
-Assuming Python installation folder is C:\Python27, open command propmt and run:
-
-    cd c:\python27\
-    scripts\pip.exe install simpleparse
-
-Download and unpack _gerbmerge_ sources, navigate to its folder and run:
-
-    c:\python27\python.exe setup.py sdist
-    c:\python27\scripts\pip.exe istall dist\gerbmerge-1.9.4.zip
-
-To uninstall gerbmerge, launch command prompt and run:
-
-    c:\python27\scripts\pip.exe uninstall gerbmerge
-
-### Unix / Mac OS X
-
-Install _pip_ (for Python 2) first. Download and unpack _gerbmerge_ sources, navigate to its folder and run:
+Install _pip_ (for Python 2) first. Download and unpack _gerbmerge_ sources, navigate to its folder and run (on Windows, omit the `sudo` command):
 
     sudo pip2 istall .
 
-This will resolve and install all dependencies, build the package and install it.
+This will resolve and install all dependencies, build the package and install it to your system.
 
-To uninstall gerbmerge, open shell and run:
+## Uninstall
+
+To uninstall gerbmerge, open a shell (or command prompt on Windows) and run (on Windows, omit the `sudo` command):
 
     sudo pip2 uninstall gerbmerge
 
 ## Running GerbMerge
 
-### Windows / Cygwin
-
-Launch Cygwin shell and type
-
-    gerbmerge
-
-### Windows (native)
-
-Open a DOS command prompt and laucnh gerberge.bat file:
-
-    c:\python27\gerbmerge.bat
-
-### Unix / Mac OS X
-
-Open shell and type
+Open a shell (or command prompt on Windows) and type
 
     gerbmerge
 
@@ -311,11 +253,11 @@ The <tt>--octagons=normal</tt> option is the default (22.5 degrees) and need not
 
 <dt>-h, --help</dt>
 
-<dd>The '<tt>-h</tt>' or '<tt>--help</tt>' option prints a brief summary of available options.</dd>
+<dd>The <tt>-h</tt> or <tt>--help</tt> option prints a brief summary of available options.</dd>
 
 <dt>-v, --version</dt>
 
-<dd>The '<tt>-v</tt>' or '<tt>--version</tt>' option prints the current program version and author contact information.</dd>
+<dd>The <tt>-v</tt> or <tt>--version</tt> option prints the current program version and author contact information.</dd>
 
 </dl>
 
