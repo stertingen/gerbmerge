@@ -955,9 +955,9 @@ class Job:
       if self.xcommands.has_key(ltool):
         for cmd in self.xcommands[ltool]:
           x, y, stop_x, stop_y = cmd
-          makestroke.drawDrillHit(fid, fmtNumberXln(x+DX), fmtNumberXln(y+DY), toolNum)
+          makestroke.drawDrillHit(fid, fmtNumberGbr(x+DX), fmtNumberGbr(y+DY), toolNum)
           if stop_x is not None:
-            makestroke.drawDrillHit(fid, fmtNumberXln(stop_x+DX), fmtNumberXln(stop_y+DY), toolNum)
+            makestroke.drawDrillHit(fid, fmtNumberGbr(stop_x+DX), fmtNumberGbr(stop_y+DY), toolNum)
 
   def aperturesAndMacros(self, layername):
     "Return dictionaries whose keys are all necessary aperture names and macro names for this layer"
