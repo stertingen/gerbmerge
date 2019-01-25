@@ -3,6 +3,11 @@
 <P><HR ALIGN=LEFT></P>
 
 <H2>What's New</H2>
+<p>In release 1.9.6</p>
+<ul>
+<li>Backported setup.py from 1.10</li>
+</ul>
+
 <p>In release 1.9.5</p>
 <ul>
 <li>Set interpreter to python2 for Archlinux compatibility</li>
@@ -72,123 +77,18 @@
 
 This repository can generate a tarball for installation with PIP. In the repository, run:
 ```
-$ python setup.py sdist
-$ pip install dist/gerbmerge-1.9.4.tar.gz
+$ sudo pip install .
 ```
+PIP will automatically resolve the dependencies.
 
-PIP will automatically resolve the dependencies. `-1.9.4` will change with the current tool version.
-
-To easily run the installed package without looking up your python path, use python's "run module as script" feature:
+To easily run the installed package without looking up your python path, run
+```
+$ gerbmerge <args>
+```
+or
 ```
 $ python -m gerbmerge <args>
 ```
-
-
-<P><A NAME="Installation"></A></P>
-<H2>Installation</H2>
-
-<H3>Windows / Cygwin</H3>
-<p>Install Cygwin with <i>python</i>, <i>python-setuptools</i>, and <i>gcc</i> packages (gcc is needed
-for simpleparse). Launch Cygwin shell and install <i>pip</i>, then <i>simpleparse</i>:
-<ul>
-<pre>
-easy_install-x.y pip
-pip install simpleparse
-</pre>
-</ul>
-<p>(x.y is the current Python version)
-<p>Download and unpack <i>gerbmerge</i> sources, navigate to its folder in Cygwin shell and run:
-<ul>
-<pre>
-python setup.py sdist
-pip install dist/gerbmerge-1.9.4.tar.gz
-</pre>
-</ul>
-<p>Now you can use it by running <i>gerbmerge</i> in Cygwin shell.
-
-<p>To uninstall gerbmerge, launch Cygwin shell and run:
-<ul>
-<pre>
-pip uninstall gerbmerge
-</pre>
-</ul>
-
-<H3>Windows (native)</H3>
-
-<p><a href="https://www.python.org/downloads/release/python-2711/">Download</a> and install Python-2.7,
-<i>pip</i> will be installed too. Assuming Python installation folder is C:\Python27, open command propmt
-and run:
-<ul>
-<pre>
-cd c:\python27\
-scripts\pip.exe install simpleparse
-</pre>
-</ul>
-
-<p><p>Download and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
-<ul>
-<pre>
-c:\python27\python.exe setup.py sdist
-c:\python27\scripts\pip.exe istall dist\gerbmerge-1.9.4.zip
-</pre>
-</ul>
-
-<p>Now you can use it by running <i>c:\python27\gerbmerge.bat</i> in command prompt.
-
-<p>To uninstall gerbmerge, launch command prompt and run:
-<ul>
-<pre>
-c:\python27\scripts\pip.exe uninstall gerbmerge
-</pre>
-</ul>
-
-<H3>Unix / Mac OS X</H3>
-<p>Install python, gcc (required to build simpleparse), and pip (recommended)
-<p>Launch shell and install <i>simpleparse</i>:
-<ul>
-<pre>
-sudo pip install simpleparse
-</pre>
-</ul>
-<p>Download and unpack <i>gerbmerge</i> sources, navigate to its folder and run:
-<ul>
-<pre>
-python setup.py sdist
-sudo pip istall dist/gerbmerge-1.9.4.tar.gz
-</pre>
-</ul>
-<p>Now you can use it by running <i>gerbmerge</i>.
-
-<p>To uninstall gerbmerge, open shell and run:
-<ul>
-<pre>
-sudo pip uninstall gerbmerge
-</pre>
-</ul>
-
-<P><A NAME="Running"></A></P>
-<H2>Running GerbMerge</H2>
-
-<H3>Windows / Cygwin</H3>
-
-<p>Launch Cygwin shell and type
-<ul>
-<pre>
-gerbmerge
-</pre>
-</ul>
-
-<H3>Windows (native)</H3>
-<P>Open a DOS command prompt and laucnh gerberge.bat file:
-<PRE><CENTER>c:\python27\gerbmerge.bat</CENTER></PRE>
-
-<H3>Unix / Mac OS X</H3>
-<p>Open shell and type
-<ul>
-<pre>
-gerbmerge
-</pre>
-</ul>
 
 <H3>Operation</H3>
 There are three ways to run GerbMerge:
